@@ -20,7 +20,7 @@
     }
   </style>
 </head>
-<body class="bg-white text-zinc-900 min-h-screen flex flex-col font-sans antialiased">
+<body class="bg-white text-zinc-900 min-h-screen flex flex-col justify-between font-sans antialiased">
 
   <!-- SPLASH SCREEN (2 SEGUNDOS INDEPENDENTE DA REDE) -->
   <div id="splash-screen" class="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-6">
@@ -32,23 +32,22 @@
     <p class="text-xs text-zinc-400 mt-3 tracking-wider uppercase">Carregando agenda...</p>
   </div>
 
-  <!-- CABEÇALHO PRINCIPAL -->
-  <header class="bg-white border-b border-zinc-200 sticky top-0 z-30">
-    <div class="max-w-3xl mx-auto px-4 py-4 flex flex-col items-center relative">
-      <button id="btn-area-barbeiro" onclick="abrirModalLogin()" class="absolute right-4 top-4 text-xs font-medium text-zinc-500 hover:text-zinc-900 border border-zinc-200 rounded-lg px-2.5 py-1.5 transition">
-        Área do Barbeiro
-      </button>
+  <div class="w-full">
+    <!-- CABEÇALHO PRINCIPAL -->
+    <header class="bg-white border-b border-zinc-200 sticky top-0 z-30">
+      <div class="max-w-3xl mx-auto px-4 py-4 flex flex-col items-center relative">
+        <button id="btn-area-barbeiro" onclick="abrirModalLogin()" class="absolute right-4 top-4 text-xs font-medium text-zinc-500 hover:text-zinc-900 border border-zinc-200 rounded-lg px-2.5 py-1.5 transition">
+          Área do Barbeiro
+        </button>
 
-      <img src="logo.jpeg" alt="Logo Barbearia" onerror="this.style.display='none'" class="w-28 h-28 md:w-32 md:h-32 object-contain" />
-      <p id="sync-status" class="text-[11px] text-zinc-400 mt-1 flex items-center gap-1.5">
-        <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
-        <span id="sync-text">Sincronizando agenda...</span>
-      </p>
-    </div>
-  </header>
+        <img src="logo.jpeg" alt="Logo Barbearia" onerror="this.style.display='none'" class="w-28 h-28 md:w-32 md:h-32 object-contain" />
+        <p id="sync-status" class="text-[11px] text-zinc-400 mt-1 flex items-center gap-1.5">
+          <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+          <span id="sync-text">Sincronizando agenda...</span>
+        </p>
+      </div>
+    </header>
 
-  <!-- CONTEÚDO PRINCIPAL -->
-  <div class="flex-1 w-full">
     <!-- TELA DO CLIENTE -->
     <main id="view-cliente" class="max-w-2xl mx-auto px-4 py-6 space-y-6">
       
@@ -177,9 +176,9 @@
     </section>
   </div>
 
-  <!-- RODAPÉ -->
-  <footer class="w-full py-6 text-center text-xs text-zinc-400 border-t border-zinc-100 mt-8">
-    developed by <a href="https://www.instagram.com/wndf.io/" target="_blank" rel="noopener noreferrer" class="font-semibold text-zinc-600 hover:text-amber-600 transition">wonderfull</a>
+  <!-- RODAPÉ / ASSINATURA -->
+  <footer class="w-full py-6 text-center text-xs text-zinc-500 border-t border-zinc-200 bg-zinc-50/60 mt-10">
+    developed by <a href="https://www.instagram.com/wndf.io/" target="_blank" rel="noopener noreferrer" class="font-bold text-zinc-800 hover:text-amber-600 underline decoration-zinc-300 underline-offset-4 transition">wonderfull</a>
   </footer>
 
   <!-- MODAL LOGIN PIN -->
