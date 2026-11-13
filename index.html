@@ -3,1624 +3,801 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Agendamento Online | Barbearia</title>
-
-  <!-- Tailwind CSS via CDN -->
+  <title>Agendamento | Barbearia</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Fonte Inter (Google Fonts) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <!-- Ícones Lucide via CDN -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-          },
-          colors: {
-            brand: {
-              dark: '#0F172A',
-              gold: '#B45309',
-              goldLight: '#FEF3C7',
-              surface: '#F8FAFC',
-              border: '#E2E8F0'
-            }
-          }
-        }
-      }
-    }
-  </script>
-
   <style>
-    body {
-      background-color: #FFFFFF;
-      color: #0F172A;
-      font-family: 'Inter', sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    /* Barra de rolagem limpa */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #F8FAFC;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #CBD5E1;
-      border-radius: 9999px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94A3B8;
-    }
-
-    .fade-in {
-      animation: fadeIn 0.25s ease-out forwards;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Animação suave da barra de progresso da Splash Screen */
-    @keyframes splashLoad {
+    @keyframes loadBar {
       0% { width: 0%; }
       100% { width: 100%; }
     }
-    .splash-bar {
-      animation: splashLoad 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    .animate-load-bar {
+      animation: loadBar 2s linear forwards;
+    }
+    .fade-out {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease-out;
     }
   </style>
 </head>
-<body class="bg-white text-slate-900 min-h-screen flex flex-col selection:bg-slate-900 selection:text-white">
+<body class="bg-white text-zinc-900 min-h-screen font-sans antialiased">
 
-  <!-- ===================================================================== -->
-  <!-- 0. SPLASH SCREEN (2 SEGUNDOS COM LOGO.JPEG CENTRALIZADO)              -->
-  <!-- ===================================================================== -->
-  <div id="splash-screen" class="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-6 transition-opacity duration-500">
-    <div class="flex flex-col items-center max-w-xs w-full text-center space-y-6">
-      <!-- Logotipo centralizado em tamanho médio/grande com fallback elegante -->
-      <img
-        src="logo.jpeg"
-        alt="Logo da Barbearia"
-        class="w-48 md:w-64 h-auto object-contain mx-auto"
-        onerror="this.style.display='none'; document.getElementById('splash-fallback-logo').classList.remove('hidden');"
-      />
-      <div id="splash-fallback-logo" class="hidden flex flex-col items-center">
-        <div class="w-20 h-20 rounded-2xl bg-slate-900 text-amber-400 flex items-center justify-center shadow-lg mb-3">
-          <i data-lucide="scissors" class="w-10 h-10"></i>
-        </div>
-        <span class="text-2xl font-extrabold tracking-tight text-slate-900">BARBEARIA</span>
-        <span class="text-xs font-semibold uppercase tracking-[0.25em] text-amber-700 mt-1">Heitor & Jimmy</span>
-      </div>
-
-      <!-- Indicador de carregamento -->
-      <div class="w-44 space-y-2">
-        <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-          <div class="h-full bg-slate-900 rounded-full splash-bar"></div>
-        </div>
-        <p class="text-[11px] font-medium text-slate-400 uppercase tracking-widest">Carregando agenda...</p>
-      </div>
+  <!-- SPLASH SCREEN (2 SEGUNDOS INDEPENDENTE DA REDE) -->
+  <div id="splash-screen" class="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-6">
+    <img src="logo.jpeg" alt="Logo Barbearia" onerror="this.style.display='none'; document.getElementById('splash-fallback').classList.remove('hidden');" class="w-48 h-48 md:w-56 md:h-56 object-contain mb-6" />
+    <div id="splash-fallback" class="hidden text-2xl font-bold tracking-widest uppercase text-zinc-900 mb-6">BARBEARIA</div>
+    <div class="w-48 h-1.5 bg-zinc-200 rounded-full overflow-hidden">
+      <div class="h-full bg-amber-600 animate-load-bar"></div>
     </div>
+    <p class="text-xs text-zinc-400 mt-3 tracking-wider uppercase">Carregando agenda...</p>
   </div>
 
-  <!-- ===================================================================== -->
-  <!-- NOTIFICAÇÕES FLUTUANTES (TOAST)                                       -->
-  <!-- ===================================================================== -->
-  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-xs w-full"></div>
+  <!-- CABEÇALHO PRINCIPAL -->
+  <header class="bg-white border-b border-zinc-200 sticky top-0 z-30">
+    <div class="max-w-3xl mx-auto px-4 py-4 flex flex-col items-center relative">
+      <button id="btn-area-barbeiro" onclick="abrirModalLogin()" class="absolute right-4 top-4 text-xs font-medium text-zinc-500 hover:text-zinc-900 border border-zinc-200 rounded-lg px-2.5 py-1.5 transition">
+        Área do Barbeiro
+      </button>
 
-  <!-- ===================================================================== -->
-  <!-- CABEÇALHO PRINCIPAL (LOGO CENTRALIZADO + BOTÃO ÁREA BARBEIRO)         -->
-  <!-- ===================================================================== -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
-    <div class="max-w-4xl mx-auto px-4 py-3 relative flex items-center justify-center min-h-[96px] md:min-h-[124px]">
-      <!-- Botão discreto no canto superior direito -->
-      <div class="absolute right-4 top-3 flex items-center gap-1.5">
-        <button id="header-action-btn" onclick="handleHeaderAction()"
-          class="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm">
-          <i data-lucide="lock" id="header-action-icon" class="w-3.5 h-3.5 text-amber-700"></i>
-          <span id="header-action-text">Área do Barbeiro</span>
-        </button>
-      </div>
-
-      <!-- Logotipo Centralizado em Tamanho Médio/Grande -->
-      <div onclick="switchView('client')" class="cursor-pointer flex flex-col items-center justify-center pt-4 sm:pt-0">
-        <img
-          src="logo.jpeg"
-          alt="Logo Barbearia"
-          class="h-24 md:h-28 w-auto object-contain"
-          onerror="this.style.display='none'; document.getElementById('header-fallback-logo').classList.remove('hidden');"
-        />
-        <div id="header-fallback-logo" class="hidden flex items-center gap-2.5 py-2">
-          <div class="w-10 h-10 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center">
-            <i data-lucide="scissors" class="w-5 h-5"></i>
-          </div>
-          <div class="text-left">
-            <span class="block text-lg font-extrabold tracking-tight text-slate-900 leading-none">BARBEARIA</span>
-            <span class="block text-[10px] font-bold uppercase tracking-widest text-amber-700 mt-0.5">Heitor Macks & Jimmy Garcia</span>
-          </div>
-        </div>
-      </div>
+      <img src="logo.jpeg" alt="Logo Barbearia" onerror="this.style.display='none'" class="w-28 h-28 md:w-32 md:h-32 object-contain" />
+      <p id="sync-status" class="text-[11px] text-zinc-400 mt-1 flex items-center gap-1.5">
+        <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+        <span id="sync-text">Sincronizando agenda...</span>
+      </p>
     </div>
   </header>
 
-  <!-- ===================================================================== -->
-  <!-- CONTEÚDO PRINCIPAL                                                    -->
-  <!-- ===================================================================== -->
-  <main class="flex-1 max-w-4xl w-full mx-auto px-4 py-6">
-
-    <!-- =================================================================== -->
-    <!-- 1. VISÃO DO CLIENTE                                                 -->
-    <!-- =================================================================== -->
-    <section id="view-client" class="fade-in space-y-6">
-
-      <!-- Barra de Progresso -->
-      <div class="space-y-2">
-        <div class="flex items-center justify-between text-xs font-semibold text-slate-500">
-          <span id="client-step-label">Passo 1 de 4: Escolha o Profissional</span>
-          <span class="text-amber-700 font-bold" id="client-step-percent">25%</span>
-        </div>
-        <div class="grid grid-cols-4 gap-2">
-          <div id="prog-1" class="h-1.5 rounded-full bg-slate-900 transition-all"></div>
-          <div id="prog-2" class="h-1.5 rounded-full bg-slate-200 transition-all"></div>
-          <div id="prog-3" class="h-1.5 rounded-full bg-slate-200 transition-all"></div>
-          <div id="prog-4" class="h-1.5 rounded-full bg-slate-200 transition-all"></div>
-        </div>
+  <!-- TELA DO CLIENTE -->
+  <main id="view-cliente" class="max-w-2xl mx-auto px-4 py-6 space-y-6">
+    
+    <!-- PASSO 1: ESCOLHER BARBEIRO -->
+    <section class="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-zinc-500 mb-3">1. Escolha o Profissional</h2>
+      <div class="grid grid-cols-2 gap-3" id="lista-barbeiros">
+        <button type="button" onclick="selecionarBarbeiro('heitor')" id="btn-barb-heitor" class="barbeiro-card border-2 border-zinc-200 rounded-xl p-4 text-left hover:border-amber-600 transition">
+          <div class="font-bold text-zinc-900 text-base">Heitor Macks</div>
+          <div class="text-xs text-zinc-500 mt-0.5">Barbeiro</div>
+        </button>
+        <button type="button" onclick="selecionarBarbeiro('jimmy')" id="btn-barb-jimmy" class="barbeiro-card border-2 border-zinc-200 rounded-xl p-4 text-left hover:border-amber-600 transition">
+          <div class="font-bold text-zinc-900 text-base">Jimmy Garcia</div>
+          <div class="text-xs text-zinc-500 mt-0.5">Barbeiro</div>
+        </button>
       </div>
-
-      <!-- PASSO 1: ESCOLHA DO BARBEIRO -->
-      <div id="client-step-1" class="space-y-4">
-        <div class="text-center sm:text-left">
-          <h2 class="text-xl font-extrabold text-slate-900">Com quem você deseja agendar?</h2>
-          <p class="text-sm text-slate-500 mt-0.5">Selecione o barbeiro para visualizar os serviços e horários disponíveis.</p>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <!-- Card Heitor Macks -->
-          <div onclick="selectClientBarber('heitor')"
-            class="cursor-pointer group bg-white hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-900 rounded-2xl p-5 transition-all shadow-sm flex items-center gap-4">
-            <div class="w-16 h-16 rounded-2xl bg-slate-900 text-amber-400 flex items-center justify-center font-extrabold text-xl shrink-0 group-hover:scale-105 transition-transform">
-              HM
-            </div>
-            <div class="flex-1 min-w-0">
-              <span class="inline-block text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md mb-1">
-                Barbeiro
-              </span>
-              <h3 class="text-lg font-extrabold text-slate-900 truncate">Heitor Macks</h3>
-              <p class="text-xs text-slate-500 mt-0.5">Ver serviços e agenda</p>
-            </div>
-            <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400 group-hover:text-slate-900 transition-colors"></i>
-          </div>
-
-          <!-- Card Jimmy Garcia -->
-          <div onclick="selectClientBarber('jimmy')"
-            class="cursor-pointer group bg-white hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-900 rounded-2xl p-5 transition-all shadow-sm flex items-center gap-4">
-            <div class="w-16 h-16 rounded-2xl bg-slate-900 text-amber-400 flex items-center justify-center font-extrabold text-xl shrink-0 group-hover:scale-105 transition-transform">
-              JG
-            </div>
-            <div class="flex-1 min-w-0">
-              <span class="inline-block text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md mb-1">
-                Barbeiro
-              </span>
-              <h3 class="text-lg font-extrabold text-slate-900 truncate">Jimmy Garcia</h3>
-              <p class="text-xs text-slate-500 mt-0.5">Ver serviços e agenda</p>
-            </div>
-            <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400 group-hover:text-slate-900 transition-colors"></i>
-          </div>
-        </div>
-      </div>
-
-      <!-- PASSO 2: ESCOLHA DO SERVIÇO (FILTRADO PELO BARBEIRO) -->
-      <div id="client-step-2" class="hidden space-y-4 fade-in">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-2xl p-4">
-          <div class="flex items-center gap-3">
-            <div id="selected-barber-avatar" class="w-10 h-10 rounded-xl bg-slate-900 text-amber-400 font-bold text-sm flex items-center justify-center">HM</div>
-            <div>
-              <p class="text-[11px] font-semibold text-slate-500 uppercase">Profissional selecionado</p>
-              <p id="selected-barber-name" class="text-sm font-extrabold text-slate-900">Heitor Macks</p>
-            </div>
-          </div>
-          <button onclick="goToClientStep(1)" class="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1 self-start sm:self-center">
-            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Trocar Barbeiro
-          </button>
-        </div>
-
-        <div>
-          <h2 class="text-lg font-extrabold text-slate-900">Selecione o serviço desejado</h2>
-          <p class="text-xs text-slate-500">Exibindo os serviços atendidos por este profissional.</p>
-        </div>
-
-        <div id="client-services-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <!-- Renderizado via JS -->
-        </div>
-      </div>
-
-      <!-- PASSO 3: ESCOLHA DE DATA E HORÁRIO -->
-      <div id="client-step-3" class="hidden space-y-5 fade-in">
-        <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
-          <div class="text-xs">
-            <span class="text-slate-500">Serviço:</span>
-            <strong id="step3-summary-service" class="text-slate-900 ml-1">-</strong>
-            <span id="step3-summary-meta" class="text-amber-700 font-bold ml-1.5">(-)</span>
-          </div>
-          <button onclick="goToClientStep(2)" class="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1 shrink-0">
-            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Voltar
-          </button>
-        </div>
-
-        <!-- Seletor de Data -->
-        <div class="space-y-2.5">
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-bold uppercase tracking-wider text-slate-700">1. Escolha a Data</label>
-            <input type="date" id="client-date-picker" onchange="onClientDateInput(this.value)"
-              class="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 outline-none focus:border-slate-900" />
-          </div>
-          <div id="client-dates-carousel" class="flex gap-2 overflow-x-auto pb-2">
-            <!-- Renderizado via JS -->
-          </div>
-        </div>
-
-        <!-- Horários Disponíveis -->
-        <div class="space-y-2.5">
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-bold uppercase tracking-wider text-slate-700">2. Horários Disponíveis</label>
-            <span id="slots-duration-info" class="text-xs font-semibold text-slate-500">Duração: 45 min</span>
-          </div>
-          <div id="client-times-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5">
-            <!-- Renderizado via JS -->
-          </div>
-        </div>
-      </div>
-
-      <!-- PASSO 4: DADOS DO CLIENTE (NOME COMPLETO, WHATSAPP E E-MAIL) -->
-      <div id="client-step-4" class="hidden space-y-5 fade-in">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-extrabold text-slate-900">Finalize seu agendamento</h2>
-          <button onclick="goToClientStep(3)" class="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1">
-            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Alterar Horário
-          </button>
-        </div>
-
-        <!-- Card Resumo -->
-        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5 text-sm">
-          <div class="flex justify-between border-b border-slate-200 pb-2">
-            <span class="text-slate-500">Profissional</span>
-            <strong id="conf-barber" class="text-slate-900">-</strong>
-          </div>
-          <div class="flex justify-between border-b border-slate-200 pb-2">
-            <span class="text-slate-500">Serviço</span>
-            <strong id="conf-service" class="text-slate-900 text-right">-</strong>
-          </div>
-          <div class="flex justify-between border-b border-slate-200 pb-2">
-            <span class="text-slate-500">Data e Horário</span>
-            <strong id="conf-datetime" class="text-amber-700">-</strong>
-          </div>
-          <div class="flex justify-between pt-0.5">
-            <span class="font-semibold text-slate-700">Valor do Serviço</span>
-            <strong id="conf-price" class="text-base font-extrabold text-slate-900">R$ 0,00</strong>
-          </div>
-        </div>
-
-        <!-- Formulário do Cliente -->
-        <form id="booking-form" onsubmit="submitClientBooking(event)" class="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Nome Completo *</label>
-            <input type="text" id="input-client-name" required placeholder="Digite seu nome completo"
-              class="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-900 rounded-xl px-4 py-3 text-sm text-slate-900 outline-none transition-all" />
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1.5">WhatsApp *</label>
-              <input type="tel" id="input-client-whatsapp" required placeholder="(11) 99999-9999" maxlength="15" oninput="maskPhone(this)"
-                class="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-900 rounded-xl px-4 py-3 text-sm text-slate-900 outline-none transition-all" />
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1.5">E-mail *</label>
-              <input type="email" id="input-client-email" required placeholder="seuemail@exemplo.com"
-                class="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-900 rounded-xl px-4 py-3 text-sm text-slate-900 outline-none transition-all" />
-            </div>
-          </div>
-
-          <button type="submit"
-            class="w-full py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2">
-            <i data-lucide="check-circle-2" class="w-4 h-4 text-amber-400"></i>
-            <span>Confirmar Agendamento</span>
-          </button>
-        </form>
-      </div>
-
-      <!-- TELA DE CONFIRMAÇÃO / COMPROVANTE -->
-      <div id="client-step-success" class="hidden fade-in bg-white border border-slate-200 rounded-2xl p-6 text-center space-y-5 shadow-sm">
-        <div class="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
-          <i data-lucide="check" class="w-8 h-8 stroke-[3]"></i>
-        </div>
-
-        <div>
-          <h2 class="text-xl font-extrabold text-slate-900">Agendamento Confirmado!</h2>
-          <p class="text-sm text-slate-500 mt-1">Seu horário já está reservado na agenda do barbeiro.</p>
-        </div>
-
-        <div id="success-summary-box" class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-left text-sm space-y-2 max-w-md mx-auto">
-          <!-- Preenchido via JS -->
-        </div>
-
-        <div class="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto pt-1">
-          <a id="btn-wa-share" href="#" target="_blank" rel="noopener noreferrer"
-            class="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm">
-            <i data-lucide="message-circle" class="w-4 h-4"></i>
-            <span>Confirmar no WhatsApp</span>
-          </a>
-          <button onclick="resetClientBooking()"
-            class="py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm transition-all">
-            Novo Agendamento
-          </button>
-        </div>
-      </div>
-
     </section>
 
-    <!-- =================================================================== -->
-    <!-- 2. PAINEL DE CONTROLE DO BARBEIRO                                   -->
-    <!-- =================================================================== -->
-    <section id="view-admin" class="hidden fade-in space-y-6">
+    <!-- PASSO 2: ESCOLHER SERVIÇO -->
+    <section id="sec-servicos" class="hidden bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-zinc-500 mb-3">2. Escolha o Serviço</h2>
+      <div id="lista-servicos" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
+    </section>
 
-      <!-- Barra de Identificação do Barbeiro Logado -->
-      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div class="flex items-center gap-3.5">
-          <div id="admin-avatar" class="w-12 h-12 rounded-2xl bg-slate-900 text-amber-400 font-extrabold text-base flex items-center justify-center shrink-0">
-            HM
+    <!-- PASSO 3: DATA E HORÁRIO -->
+    <section id="sec-data-hora" class="hidden bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm space-y-4">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-zinc-500">3. Data e Horário Disponível</h2>
+      <div>
+        <label class="block text-xs font-semibold text-zinc-600 mb-1">Selecione a Data</label>
+        <input type="date" id="input-data" onchange="renderizarHorariosDisponiveis()" class="w-full border border-zinc-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-amber-600" />
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-zinc-600 mb-2">Horários Livres</label>
+        <div id="grid-horarios" class="grid grid-cols-3 sm:grid-cols-4 gap-2"></div>
+      </div>
+    </section>
+
+    <!-- PASSO 4: DADOS DO CLIENTE -->
+    <section id="sec-dados-cliente" class="hidden bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm space-y-4">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-zinc-500">4. Seus Dados</h2>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-zinc-700 mb-1">Nome Completo *</label>
+          <input type="text" id="cli-nome" placeholder="Ex: João Pedro Silva" class="w-full border border-zinc-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-amber-600" />
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-zinc-700 mb-1">WhatsApp *</label>
+            <input type="tel" id="cli-whatsapp" placeholder="(51) 99999-9999" class="w-full border border-zinc-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-amber-600" />
           </div>
           <div>
-            <div class="flex items-center gap-2">
-              <span class="text-[10px] font-bold uppercase tracking-wider bg-slate-900 text-white px-2 py-0.5 rounded-md">Painel Profissional</span>
-              <span id="cloud-badge" class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                Modo Local Ativo
-              </span>
-            </div>
-            <h2 id="admin-logged-name" class="text-lg font-extrabold text-slate-900 mt-0.5">Heitor Macks</h2>
+            <label class="block text-xs font-semibold text-zinc-700 mb-1">E-mail *</label>
+            <input type="email" id="cli-email" placeholder="seuemail@exemplo.com" class="w-full border border-zinc-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-amber-600" />
           </div>
         </div>
-
-        <!-- Botões de Ação do Barbeiro -->
-        <div class="flex flex-wrap items-center gap-2">
-          <button onclick="openModalManual()"
-            class="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all flex items-center gap-1.5 shadow-sm">
-            <i data-lucide="plus" class="w-4 h-4 text-amber-400"></i>
-            <span>Agendar Cliente</span>
-          </button>
-          <button onclick="openModalBlock()"
-            class="px-3.5 py-2.5 rounded-xl bg-white hover:bg-red-50 border border-slate-200 hover:border-red-200 text-slate-800 hover:text-red-700 font-bold text-xs transition-all flex items-center gap-1.5">
-            <i data-lucide="ban" class="w-3.5 h-3.5 text-red-600"></i>
-            <span>Bloquear Horário</span>
-          </button>
-          <button id="btn-sync-cloud" onclick="fetchFromSheets(true)"
-            class="px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs transition-all flex items-center gap-1.5" title="Sincronizar com Google Drive">
-            <i data-lucide="refresh-cw" id="sync-icon" class="w-3.5 h-3.5 text-amber-700"></i>
-            <span>Sincronizar</span>
-          </button>
-          <button onclick="logoutBarber()"
-            class="px-3 py-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-red-600 font-bold text-xs transition-all flex items-center gap-1" title="Sair da conta">
-            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-            <span>Sair</span>
-          </button>
-        </div>
       </div>
 
-      <!-- Filtros do Painel (Data + Seletor de Barbeiro apenas se logado como Admin Geral 9999) -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div class="bg-white border border-slate-200 rounded-2xl p-3.5">
-          <div class="flex items-center justify-between mb-1">
-            <label class="block text-[11px] font-bold uppercase text-slate-500">Data da Agenda</label>
-            <button type="button" onclick="setAdminToday()" class="text-[11px] font-bold text-amber-700 hover:underline">Hoje</button>
-          </div>
-          <input type="date" id="admin-date-filter" onchange="renderAdminAgenda()"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-slate-900" />
-        </div>
-
-        <div id="admin-barber-filter-box" class="bg-white border border-slate-200 rounded-2xl p-3.5">
-          <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Profissional</label>
-          <select id="admin-barber-select" onchange="renderAdminAgenda()"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-slate-900">
-            <option value="all">Todos os Barbeiros (Heitor & Jimmy)</option>
-            <option value="heitor">Heitor Macks</option>
-            <option value="jimmy">Jimmy Garcia</option>
-          </select>
-        </div>
+      <!-- RESUMO -->
+      <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-3.5 text-xs space-y-1 text-zinc-700">
+        <div><strong>Profissional:</strong> <span id="res-barbeiro">-</span></div>
+        <div><strong>Serviço:</strong> <span id="res-servico">-</span></div>
+        <div><strong>Data e Hora:</strong> <span id="res-data-hora">-</span></div>
+        <div class="text-sm font-bold text-zinc-900 pt-1">Total: <span id="res-valor">R$ 0,00</span></div>
       </div>
 
-      <!-- Cards de Resumo do Dia -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div class="bg-white border border-slate-200 rounded-2xl p-4">
-          <span class="text-xs font-semibold text-slate-500 block">Clientes no Dia</span>
-          <strong id="stat-clients" class="text-2xl font-extrabold text-slate-900 mt-1 block">0</strong>
-        </div>
-        <div class="bg-white border border-slate-200 rounded-2xl p-4">
-          <span class="text-xs font-semibold text-slate-500 block">Previsto</span>
-          <strong id="stat-expected" class="text-2xl font-extrabold text-amber-700 mt-1 block">R$ 0,00</strong>
-        </div>
-        <div class="col-span-2 sm:col-span-1 bg-white border border-slate-200 rounded-2xl p-4">
-          <span class="text-xs font-semibold text-slate-500 block">Concluído</span>
-          <strong id="stat-completed" class="text-2xl font-extrabold text-emerald-600 mt-1 block">R$ 0,00</strong>
-        </div>
-      </div>
+      <button type="button" id="btn-confirmar-agendamento" onclick="confirmarAgendamentoCliente()" class="w-full bg-zinc-900 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl transition text-sm">
+        Confirmar Agendamento
+      </button>
+    </section>
 
-      <!-- Lista Cronológica da Agenda -->
-      <div class="space-y-3">
-        <div class="flex items-center justify-between">
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Horários do Dia</h3>
-          <span id="last-sync-label" class="text-[11px] font-medium text-slate-400">Sincronizado com Google Drive</span>
-        </div>
-
-        <div id="admin-agenda-list" class="space-y-3">
-          <!-- Renderizado via JS -->
-        </div>
-      </div>
-
+    <!-- CONFIRMAÇÃO FINAL -->
+    <section id="sec-sucesso" class="hidden bg-white border-2 border-emerald-500 rounded-2xl p-6 text-center space-y-4">
+      <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto text-xl font-bold">✓</div>
+      <h3 class="text-lg font-bold text-zinc-900">Agendamento Confirmado!</h3>
+      <p id="msg-sucesso-detalhes" class="text-sm text-zinc-600"></p>
+      <button type="button" onclick="novoAgendamento()" class="bg-zinc-900 text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-zinc-800">
+        Fazer Novo Agendamento
+      </button>
     </section>
 
   </main>
 
-  <!-- ===================================================================== -->
-  <!-- RODAPÉ DISCRETO                                                       -->
-  <!-- ===================================================================== -->
-  <footer class="border-t border-slate-100 py-5 text-center text-xs text-slate-400">
-    <p>Heitor Macks & Jimmy Garcia • Sistema de Agendamento Online</p>
-  </footer>
-
-  <!-- ===================================================================== -->
-  <!-- MODAIS                                                                -->
-  <!-- ===================================================================== -->
-
-  <!-- Modal 1: Login por PIN do Barbeiro -->
-  <div id="modal-pin" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-6 space-y-5 shadow-2xl fade-in">
-      <div class="flex items-center justify-between">
-        <div>
-          <h3 class="text-base font-extrabold text-slate-900">Acesso Exclusivo Barbeiros</h3>
-          <p class="text-xs text-slate-500">Digite seu PIN individual para abrir sua agenda</p>
-        </div>
-        <button onclick="closeModal('modal-pin')" class="text-slate-400 hover:text-slate-900">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
+  <!-- PAINEL DO BARBEIRO -->
+  <section id="view-barbeiro" class="hidden max-w-3xl mx-auto px-4 py-6 space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 bg-zinc-50 border border-zinc-200 rounded-2xl p-4">
+      <div>
+        <span class="text-xs uppercase tracking-wider text-amber-700 font-bold">Painel Profissional</span>
+        <h2 id="painel-titulo-barbeiro" class="text-lg font-bold text-zinc-900">Agenda</h2>
       </div>
+      <div class="flex items-center gap-2">
+        <button onclick="carregarAgendamentosNuvem(true)" class="text-xs bg-white border border-zinc-300 px-3 py-2 rounded-lg font-medium hover:bg-zinc-100">Atualizar</button>
+        <button onclick="abrirModalManual('agendamento')" class="text-xs bg-zinc-900 text-white px-3 py-2 rounded-lg font-medium hover:bg-amber-600">+ Agendar Cliente</button>
+        <button onclick="abrirModalManual('bloqueio')" class="text-xs bg-red-600 text-white px-3 py-2 rounded-lg font-medium hover:bg-red-700">+ Bloquear Horário</button>
+        <button onclick="sairPainelBarbeiro()" class="text-xs text-zinc-500 hover:text-zinc-900 px-2 py-2">Sair</button>
+      </div>
+    </div>
 
-      <form onsubmit="submitPinLogin(event)" class="space-y-4">
-        <input type="password" id="pin-field" inputmode="numeric" maxlength="4" required placeholder="••••"
-          class="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-900 rounded-xl py-3.5 text-center text-2xl font-extrabold tracking-[0.5em] text-slate-900 outline-none" />
+    <!-- FILTRO DE DATA E RESUMO -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div class="bg-white border border-zinc-200 rounded-xl p-3.5">
+        <label class="block text-[11px] font-bold uppercase text-zinc-400 mb-1">Data da Agenda</label>
+        <input type="date" id="painel-data" onchange="renderizarAgendaBarbeiro()" class="w-full text-sm font-semibold text-zinc-900 focus:outline-none" />
+      </div>
+      <div class="bg-white border border-zinc-200 rounded-xl p-3.5">
+        <div class="text-[11px] font-bold uppercase text-zinc-400">Atendimentos no Dia</div>
+        <div id="stat-qtd" class="text-xl font-bold text-zinc-900 mt-0.5">0</div>
+      </div>
+      <div class="bg-white border border-zinc-200 rounded-xl p-3.5">
+        <div class="text-[11px] font-bold uppercase text-zinc-400">Faturamento Previsto</div>
+        <div id="stat-valor" class="text-xl font-bold text-emerald-600 mt-0.5">R$ 0,00</div>
+      </div>
+    </div>
 
-        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px] text-slate-600 space-y-1">
-          <p><strong>Heitor Macks:</strong> PIN <span class="font-mono font-bold text-slate-900">1111</span></p>
-          <p><strong>Jimmy Garcia:</strong> PIN <span class="font-mono font-bold text-slate-900">2222</span></p>
-          <p><strong>Visão Geral (Ambos):</strong> PIN <span class="font-mono font-bold text-slate-900">9999</span></p>
-        </div>
+    <!-- SELETOR DE BARBEIRO (APENAS PARA ADMIN/PIN 9999) -->
+    <div id="admin-filtro-barbeiro" class="hidden flex gap-2">
+      <button onclick="setFiltroAdmin('todos')" class="filtro-adm-btn bg-zinc-900 text-white text-xs px-3 py-1.5 rounded-lg font-medium">Todos</button>
+      <button onclick="setFiltroAdmin('heitor')" class="filtro-adm-btn bg-zinc-100 text-zinc-700 text-xs px-3 py-1.5 rounded-lg font-medium">Heitor Macks</button>
+      <button onclick="setFiltroAdmin('jimmy')" class="filtro-adm-btn bg-zinc-100 text-zinc-700 text-xs px-3 py-1.5 rounded-lg font-medium">Jimmy Garcia</button>
+    </div>
 
-        <button type="submit" class="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition-all">
-          Acessar Agenda
-        </button>
-      </form>
+    <!-- LISTA DE AGENDAMENTOS DO DIA -->
+    <div id="lista-agenda-barbeiro" class="space-y-3"></div>
+  </section>
+
+  <!-- MODAL LOGIN PIN -->
+  <div id="modal-login" class="hidden fixed inset-0 z-40 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-xs w-full p-6 space-y-4 shadow-xl">
+      <h3 class="text-base font-bold text-zinc-900 text-center">Acesso Profissional</h3>
+      <p class="text-xs text-zinc-500 text-center">Digite seu PIN de 4 dígitos (Heitor: 1111 | Jimmy: 2222)</p>
+      <input type="password" id="input-pin" maxlength="4" inputmode="numeric" placeholder="••••" class="w-full text-center text-2xl tracking-widest border border-zinc-300 rounded-xl py-2.5 focus:outline-none focus:border-amber-600" />
+      <div class="flex gap-2">
+        <button onclick="fecharModalLogin()" class="w-1/2 py-2.5 text-xs font-semibold text-zinc-600 bg-zinc-100 rounded-xl">Cancelar</button>
+        <button onclick="validarPin()" class="w-1/2 py-2.5 text-xs font-semibold text-white bg-zinc-900 rounded-xl">Entrar</button>
+      </div>
     </div>
   </div>
 
-  <!-- Modal 2: Barbeiro Agendar Cliente Manualmente -->
-  <div id="modal-manual" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 space-y-4 my-8 shadow-2xl fade-in">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-          <i data-lucide="user-plus" class="w-4 h-4 text-amber-700"></i>
-          Agendar Cliente Manualmente
-        </h3>
-        <button onclick="closeModal('modal-manual')" class="text-slate-400 hover:text-slate-900">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
+  <!-- MODAL AGENDAMENTO MANUAL / BLOQUEIO -->
+  <div id="modal-manual" class="hidden fixed inset-0 z-40 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
+      <h3 id="modal-manual-titulo" class="text-base font-bold text-zinc-900">Novo Registro</h3>
+      
+      <div id="wrap-manual-barbeiro">
+        <label class="block text-xs font-semibold text-zinc-700 mb-1">Barbeiro</label>
+        <select id="man-barbeiro" onchange="atualizarSelectServicosManual()" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm">
+          <option value="heitor">Heitor Macks</option>
+          <option value="jimmy">Jimmy Garcia</option>
+        </select>
       </div>
 
-      <form onsubmit="submitManualBooking(event)" class="space-y-3.5">
-        <div id="manual-barber-row">
-          <label class="block text-xs font-bold text-slate-700 mb-1">Profissional *</label>
-          <select id="manual-barber" onchange="populateManualServices()"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none">
-            <option value="heitor">Heitor Macks</option>
-            <option value="jimmy">Jimmy Garcia</option>
+      <div id="wrap-manual-cliente" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-zinc-700 mb-1">Nome do Cliente</label>
+          <input type="text" id="man-cliente" placeholder="Nome completo" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-zinc-700 mb-1">WhatsApp</label>
+            <input type="tel" id="man-whatsapp" placeholder="(51) 99999-9999" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-zinc-700 mb-1">E-mail</label>
+            <input type="email" id="man-email" placeholder="Opcional" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-zinc-700 mb-1">Serviço</label>
+          <select id="man-servico" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm"></select>
+        </div>
+      </div>
+
+      <div id="wrap-manual-bloqueio" class="hidden space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-zinc-700 mb-1">Motivo do Bloqueio</label>
+          <input type="text" id="man-motivo" placeholder="Ex: Almoço, Folga, Compromisso" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-zinc-700 mb-1">Duração do Bloqueio (minutos)</label>
+          <select id="man-duracao-bloqueio" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm">
+            <option value="30">30 minutos</option>
+            <option value="45">45 minutos</option>
+            <option value="60" selected>1 hora (60 min)</option>
+            <option value="90">1h 30min (90 min)</option>
+            <option value="120">2 horas (120 min)</option>
+            <option value="240">4 horas (Meio período)</option>
+            <option value="540">Dia inteiro</option>
           </select>
         </div>
+      </div>
 
+      <div class="grid grid-cols-2 gap-2">
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Serviço *</label>
-          <select id="manual-service" required
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none">
-          </select>
+          <label class="block text-xs font-semibold text-zinc-700 mb-1">Data</label>
+          <input type="date" id="man-data" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm" />
         </div>
-
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Nome Completo do Cliente *</label>
-          <input type="text" id="manual-name" required placeholder="Ex: Lucas Oliveira"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-900" />
+          <label class="block text-xs font-semibold text-zinc-700 mb-1">Horário Início</label>
+          <input type="time" id="man-hora" value="12:00" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm" />
         </div>
+      </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">WhatsApp *</label>
-            <input type="tel" id="manual-whatsapp" required placeholder="(11) 99999-9999" maxlength="15" oninput="maskPhone(this)"
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-900" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">E-mail (opcional)</label>
-            <input type="email" id="manual-email" placeholder="cliente@email.com"
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-900" />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Data *</label>
-            <input type="date" id="manual-date" required
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Horário Início *</label>
-            <input type="time" id="manual-time" required step="900"
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none" />
-          </div>
-        </div>
-
-        <div class="pt-2 flex gap-2">
-          <button type="button" onclick="closeModal('modal-manual')" class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-sm">
-            Cancelar
-          </button>
-          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm">
-            Salvar Agendamento
-          </button>
-        </div>
-      </form>
+      <div class="flex gap-2 pt-2">
+        <button onclick="fecharModalManual()" class="w-1/2 py-2.5 text-xs font-semibold text-zinc-600 bg-zinc-100 rounded-xl">Cancelar</button>
+        <button onclick="salvarRegistroManual()" id="btn-salvar-manual" class="w-1/2 py-2.5 text-xs font-semibold text-white bg-zinc-900 rounded-xl">Salvar</button>
+      </div>
     </div>
   </div>
 
-  <!-- Modal 3: Criar Bloqueio de Horário -->
-  <div id="modal-block" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl fade-in">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-          <i data-lucide="ban" class="w-4 h-4 text-red-600"></i>
-          Bloquear Horário na Agenda
-        </h3>
-        <button onclick="closeModal('modal-block')" class="text-slate-400 hover:text-slate-900">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <form onsubmit="submitTimeBlock(event)" class="space-y-3.5">
-        <div id="block-barber-row">
-          <label class="block text-xs font-bold text-slate-700 mb-1">Profissional *</label>
-          <select id="block-barber"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none">
-            <option value="heitor">Heitor Macks</option>
-            <option value="jimmy">Jimmy Garcia</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Motivo do Bloqueio *</label>
-          <input type="text" id="block-reason" required value="Horário de Almoço" placeholder="Ex: Almoço, Folga, Compromisso"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-900" />
-        </div>
-
-        <div class="grid grid-cols-3 gap-2.5">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Data *</label>
-            <input type="date" id="block-date" required
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5 text-xs font-semibold text-slate-900 outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Início *</label>
-            <input type="time" id="block-start" required value="12:00"
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5 text-xs font-semibold text-slate-900 outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Fim *</label>
-            <input type="time" id="block-end" required value="13:00"
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5 text-xs font-semibold text-slate-900 outline-none" />
-          </div>
-        </div>
-
-        <div class="pt-2 flex gap-2">
-          <button type="button" onclick="closeModal('modal-block')" class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-sm">
-            Cancelar
-          </button>
-          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm">
-            Confirmar Bloqueio
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- ===================================================================== -->
-  <!-- LÓGICA JAVASCRIPT DO SISTEMA                                          -->
-  <!-- ===================================================================== -->
   <script>
-    // =========================================================================
-    // 1. CONFIGURAÇÃO DA BARBEARIA, BARBEIROS E OS 16 SERVIÇOS EXATOS
-    // =========================================================================
     const CONFIG = {
-      shopName: "Barbearia Heitor & Jimmy",
-      shopWhatsapp: "5511999999999", // Coloque aqui o WhatsApp oficial da barbearia (55 + DDD + Número)
-      openHour: 9,                     // Horário de abertura: 09:00
-      closeHour: 20,                   // Horário de fechamento: 20:00
-      slotStepMinutes: 15,             // Intervalo de geração de horários (15 em 15 min)
-      sheetsApiUrl: "https://script.google.com/macros/s/AKfycbwzg4N10LaoNz4lS5arxLmTyIWxaLPS5Vl6AfUNb5zbdvrzjf7vMYKWFy0YJ2miiahs/exec"
+      sheetsApiUrl: 'https://script.google.com/macros/s/AKfycbwzg4N10LaoNz4lS5arxLmTyIWxaLPS5Vl6AfUNb5zbdvrzjf7vMYKWFy0YJ2miiahs/exec',
+      horaAbertura: '09:00',
+      horaFechamento: '20:00',
+      intervaloGrade: 15, // minutos entre opções exibidas
+      barbeiros: {
+        heitor: { id: 'heitor', nome: 'Heitor Macks', pin: '1111' },
+        jimmy: { id: 'jimmy', nome: 'Jimmy Garcia', pin: '2222' }
+      },
+      pinAdmin: '9999'
     };
 
-    const BARBERS = [
-      { id: 'heitor', name: 'Heitor Macks', initials: 'HM', pin: '1111' },
-      { id: 'jimmy',  name: 'Jimmy Garcia', initials: 'JG', pin: '2222' }
-    ];
-    const ADMIN_MASTER_PIN = '9999';
-
-    // Catálogo completo com os 16 serviços solicitados
-    const SERVICES = [
-      { id: 'srv-1',  name: 'Barba com Heitor',                               price: 60,  duration: 45, barber: 'heitor' },
-      { id: 'srv-2',  name: 'Barba com Jimmy',                                price: 55,  duration: 45, barber: 'jimmy' },
-      { id: 'srv-3',  name: 'Pigmentação de Barba',                           price: 70,  duration: 45, barber: 'both' },
-      { id: 'srv-4',  name: 'Corte com Heitor',                               price: 70,  duration: 45, barber: 'heitor' },
-      { id: 'srv-5',  name: 'Corte com Jimmy',                                price: 70,  duration: 45, barber: 'jimmy' },
-      { id: 'srv-6',  name: 'Corte e Barba com Heitor',                       price: 120, duration: 75, barber: 'heitor' },
-      { id: 'srv-7',  name: 'Corte e Barba com Jimmy',                        price: 110, duration: 75, barber: 'jimmy' },
-      { id: 'srv-8',  name: 'Corte e Esfoliação Facial',                      price: 100, duration: 75, barber: 'both' },
-      { id: 'srv-9',  name: 'Corte e Sobrancelha',                            price: 75,  duration: 45, barber: 'both' },
-      { id: 'srv-10', name: 'Corte Máquina e Barba',                          price: 90,  duration: 60, barber: 'both' },
-      { id: 'srv-11', name: 'Corte e Barba + Esfoliação Facial',              price: 125, duration: 75, barber: 'both' },
-      { id: 'srv-12', name: 'Corte e Barba + Pigmentação',                    price: 150, duration: 90, barber: 'both' },
-      { id: 'srv-13', name: 'Corte + Selagem',                                price: 100, duration: 60, barber: 'both' },
-      { id: 'srv-14', name: 'Corte e Barba + Sobrancelha',                    price: 115, duration: 75, barber: 'both' },
-      { id: 'srv-15', name: 'Corte e Barba + Sobrancelha e Esfoliação Facial',price: 140, duration: 90, barber: 'both' },
-      { id: 'srv-16', name: 'Barba Máquina',                                  price: 85,  duration: 45, barber: 'both' }
+    const SERVICOS = [
+      { id: 's1', nome: 'Barba com Heitor', preco: 60, duracao: 45, barbeiro: 'heitor' },
+      { id: 's2', nome: 'Barba com Jimmy', preco: 55, duracao: 45, barbeiro: 'jimmy' },
+      { id: 's3', nome: 'Pigmentação de Barba', preco: 70, duracao: 45, barbeiro: 'ambos' },
+      { id: 's4', nome: 'Corte com Heitor', preco: 70, duracao: 45, barbeiro: 'heitor' },
+      { id: 's5', nome: 'Corte com Jimmy', preco: 70, duracao: 45, barbeiro: 'jimmy' },
+      { id: 's6', nome: 'Corte e Barba com Heitor', preco: 120, duracao: 75, barbeiro: 'heitor' },
+      { id: 's7', nome: 'Corte e Barba com Jimmy', preco: 110, duracao: 75, barbeiro: 'jimmy' },
+      { id: 's8', nome: 'Corte e Esfoliação Facial', preco: 100, duracao: 75, barbeiro: 'ambos' },
+      { id: 's9', nome: 'Corte e Sobrancelha', preco: 75, duracao: 45, barbeiro: 'ambos' },
+      { id: 's10', nome: 'Corte Máquina e Barba', preco: 90, duracao: 60, barbeiro: 'ambos' },
+      { id: 's11', nome: 'Corte e Barba + Esfoliação Facial', preco: 125, duracao: 75, barbeiro: 'ambos' },
+      { id: 's12', nome: 'Corte e Barba + Pigmentação', preco: 150, duracao: 90, barbeiro: 'ambos' },
+      { id: 's13', nome: 'Corte + Selagem', preco: 100, duracao: 60, barbeiro: 'ambos' },
+      { id: 's14', nome: 'Corte e Barba + Sobrancelha', preco: 115, duracao: 75, barbeiro: 'ambos' },
+      { id: 's15', nome: 'Corte e Barba + Sobrancelha e Esfoliação Facial', preco: 140, duracao: 90, barbeiro: 'ambos' },
+      { id: 's16', nome: 'Barba Máquina', preco: 85, duracao: 45, barbeiro: 'ambos' }
     ];
 
-    const STORAGE_BOOKINGS_KEY = 'hj_barber_bookings_v1';
-    const STORAGE_SESSION_KEY  = 'hj_barber_session_v1';
-
-    // =========================================================================
-    // 2. ESTADO DA APLICAÇÃO
-    // =========================================================================
-    let bookings = [];
-    let currentView = 'client';
-    let loggedUser = null; // { id: 'heitor' | 'jimmy' | 'admin', name: string }
-    let isSyncing = false;
-
-    let bookingDraft = {
-      barberId: null,
-      serviceId: null,
-      date: '',
-      time: ''
+    let estado = {
+      agendamentos: [],
+      barbeiroSelecionado: null,
+      servicoSelecionado: null,
+      horarioSelecionado: null,
+      usuarioLogado: null, // 'heitor', 'jimmy' ou 'admin'
+      filtroAdmin: 'todos',
+      tipoModalManual: 'agendamento'
     };
 
-    // =========================================================================
-    // 5. ARMAZENAMENTO LOCAL + INTEGRAÇÃO GOOGLE SHEETS (GOOGLE DRIVE)
-    // =========================================================================
-    function getSheetsUrl() {
-      return CONFIG.sheetsApiUrl;
-    }
-
-    function loadLocalBookings() {
-      const raw = localStorage.getItem(STORAGE_BOOKINGS_KEY);
-      if (raw) {
-        bookings = JSON.parse(raw);
-      } else {
-        bookings = [];
-        saveBookings();
-      }
-      updateCloudStatusUI('syncing');
-      fetchFromSheets(false);
-    }
-
-    function saveBookings() {
-      localStorage.setItem(STORAGE_BOOKINGS_KEY, JSON.stringify(bookings));
-    }
-
-    function updateCloudStatusUI(state = 'connected') {
-      const badge = document.getElementById('cloud-badge');
-      const syncIcon = document.getElementById('sync-icon');
-      const lastSyncLabel = document.getElementById('last-sync-label');
-      if (!badge) return;
-
-      if (state === 'syncing') {
-        badge.textContent = 'Sincronizando...';
-        badge.className = 'text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md';
-        if (syncIcon) syncIcon.classList.add('animate-spin');
-      } else if (state === 'error') {
-        badge.textContent = 'Offline (Cache Local)';
-        badge.className = 'text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md';
-        if (syncIcon) syncIcon.classList.remove('animate-spin');
-      } else {
-        badge.textContent = 'Nuvem Conectada';
-        badge.className = 'text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md';
-        if (syncIcon) syncIcon.classList.remove('animate-spin');
-        if (lastSyncLabel) {
-          const now = new Date();
-          const hh = now.getHours().toString().padStart(2, '0');
-          const mm = now.getMinutes().toString().padStart(2, '0');
-          lastSyncLabel.textContent = `Atualizado às ${hh}:${mm}`;
-        }
-      }
-    }
-
-    async function sendCreateToSheets(record) {
-      const url = getSheetsUrl();
-      if (!url) return;
-      updateCloudStatusUI('syncing');
-      try {
-        await fetch(url, {
-          method: 'POST',
-          redirect: 'follow',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'create',
-            data: {
-              id: record.id,
-              tipo: record.type === 'block' ? 'bloqueio' : 'agendamento',
-              cliente_nome: record.clientName,
-              cliente_whatsapp: record.clientWhatsapp,
-              cliente_email: record.clientEmail,
-              barbeiro_id: record.barberId,
-              barbeiro_nome: record.barberName,
-              servico_nome: record.serviceName,
-              preco: record.price,
-              data: record.date,
-              hora_inicio: record.startTime,
-              hora_fim: record.endTime,
-              status: record.status
-            }
-          })
-        });
-        updateCloudStatusUI('connected');
-      } catch (e) {
-        console.warn('Falha ao enviar para planilha:', e);
-        updateCloudStatusUI('error');
-      }
-    }
-
-    async function sendStatusToSheets(id, status) {
-      const url = getSheetsUrl();
-      if (!url) return;
-      updateCloudStatusUI('syncing');
-      try {
-        await fetch(url, {
-          method: 'POST',
-          redirect: 'follow',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'update_status', id, status })
-        });
-        updateCloudStatusUI('connected');
-      } catch (e) {
-        console.warn('Falha ao atualizar status na planilha:', e);
-        updateCloudStatusUI('error');
-      }
-    }
-
-    async function fetchFromSheets(notify = false) {
-      const url = getSheetsUrl();
-      if (!url || isSyncing) return;
-      isSyncing = true;
-      updateCloudStatusUI('syncing');
-      try {
-        const res = await fetch(url, { method: 'GET', redirect: 'follow' });
-        const json = await res.json();
-        if (json && Array.isArray(json.agendamentos)) {
-          bookings = json.agendamentos.map(row => {
-            const isBlock = row.tipo === 'bloqueio' || row.status === 'bloqueado';
-            return {
-              id: String(row.id),
-              type: isBlock ? 'block' : 'booking',
-              clientName: row.cliente_nome || '',
-              clientWhatsapp: row.cliente_whatsapp || '',
-              clientEmail: row.cliente_email || '',
-              barberId: row.barbeiro_id,
-              barberName: row.barbeiro_nome,
-              serviceName: row.servico_nome,
-              price: Number(row.preco || 0),
-              date: String(row.data).replace(/^'/, '').split('T')[0],
-              startTime: String(row.hora_inicio).replace(/^'/, '').slice(0, 5),
-              endTime: String(row.hora_fim).replace(/^'/, '').slice(0, 5),
-              status: row.status || 'agendado'
-            };
-          });
-          saveBookings();
-          if (currentView === 'admin') renderAdminAgenda();
-          if (currentView === 'client' && !document.getElementById('client-step-3').classList.contains('hidden')) {
-            renderClientTimeSlots();
-          }
-          updateCloudStatusUI('connected');
-          if (notify) showToast('Agenda sincronizada com Google Drive!', 'success');
-        }
-      } catch (err) {
-        updateCloudStatusUI('error');
-        if (notify) showToast('Não foi possível sincronizar agora.', 'error');
-      } finally {
-        isSyncing = false;
-      }
-    }
-
-    function showToast(msg, type = 'success') {
-      const box = document.getElementById('toast-container');
-      const el = document.createElement('div');
-      const styles = {
-        success: 'bg-slate-900 text-white border-slate-800',
-        error: 'bg-red-600 text-white border-red-700',
-        info: 'bg-amber-700 text-white border-amber-800'
-      };
-      el.className = `pointer-events-auto border ${styles[type] || styles.success} px-4 py-3 rounded-xl shadow-lg text-xs font-semibold fade-in`;
-      el.textContent = msg;
-      box.appendChild(el);
+    // 1. CONTROLE DA TELA INICIAL (GARANTIDO EM 2 SEGUNDOS)
+    function iniciarSplash() {
       setTimeout(() => {
-        el.style.opacity = '0';
-        el.style.transition = 'opacity 0.25s ease';
-        setTimeout(() => el.remove(), 250);
-      }, 3200);
+        const splash = document.getElementById('splash-screen');
+        if (splash) {
+          splash.classList.add('fade-out');
+          setTimeout(() => splash.remove(), 450);
+        }
+      }, 2000);
     }
 
-    // =========================================================================
-    // 5. ARMAZENAMENTO LOCAL + INTEGRAÇÃO GOOGLE SHEETS
-    // =========================================================================
-    function getSheetsUrl() {
-      return localStorage.getItem(STORAGE_SHEETS_KEY) || CONFIG.sheetsApiUrl || '';
-    }
+    // 2. INICIALIZAÇÃO DO APP
+    window.addEventListener('DOMContentLoaded', () => {
+      iniciarSplash();
 
-    function loadLocalBookings() {
-      const raw = localStorage.getItem(STORAGE_BOOKINGS_KEY);
-      if (raw) {
-        bookings = JSON.parse(raw);
-      } else {
-        bookings = [];
-        saveBookings();
-      }
-      updateCloudStatusUI();
-      if (getSheetsUrl()) {
-        fetchFromSheets(false);
-      }
-    }
+      const hoje = new Date().toISOString().split('T')[0];
+      document.getElementById('input-data').value = hoje;
+      document.getElementById('input-data').min = hoje;
+      document.getElementById('painel-data').value = hoje;
 
-    function saveBookings() {
-      localStorage.setItem(STORAGE_BOOKINGS_KEY, JSON.stringify(bookings));
-    }
-
-    function updateCloudStatusUI() {
-      const url = getSheetsUrl();
-      const badge = document.getElementById('cloud-badge');
-      const syncBtn = document.getElementById('btn-sync-cloud');
-      if (url) {
-        badge.textContent = 'Google Sheets Conectado';
-        badge.className = 'text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md';
-        if (syncBtn) syncBtn.classList.remove('hidden');
-      } else {
-        badge.textContent = 'Armazenamento Local';
-        badge.className = 'text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md';
-        if (syncBtn) syncBtn.classList.add('hidden');
-      }
-    }
-
-    async function sendCreateToSheets(record) {
-      const url = getSheetsUrl();
-      if (!url) return;
+      // Carrega cache local imediatamente para não travar a tela
       try {
-        await fetch(url, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'create',
-            data: {
-              id: record.id,
-              cliente_nome: record.clientName,
-              cliente_whatsapp: record.clientWhatsapp,
-              cliente_email: record.clientEmail,
-              barbeiro_id: record.barberId,
-              barbeiro_nome: record.barberName,
-              servico_nome: record.serviceName,
-              preco: record.price,
-              data: record.date,
-              hora_inicio: record.startTime,
-              hora_fim: record.endTime,
-              status: record.status
-            }
-          })
-        });
-      } catch (e) {
-        console.warn('Falha ao enviar para planilha:', e);
-      }
-    }
+        const cache = localStorage.getItem('barbearia_agendamentos');
+        if (cache) estado.agendamentos = JSON.parse(cache);
+      } catch (e) {}
 
-    async function sendStatusToSheets(id, status) {
-      const url = getSheetsUrl();
-      if (!url) return;
-      try {
-        await fetch(url, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'update_status', id, status })
-        });
-      } catch (e) {
-        console.warn('Falha ao atualizar status na planilha:', e);
-      }
-    }
+      // Busca dados atualizados da planilha em segundo plano
+      carregarAgendamentosNuvem(false);
+    });
 
-    async function fetchFromSheets(notify = false) {
-      const url = getSheetsUrl();
-      if (!url) return;
+    async function carregarAgendamentosNuvem(mostrarAlerta = false) {
+      atualizarStatusSync('carregando', 'Sincronizando agenda...');
       try {
-        const res = await fetch(url);
-        const json = await res.json();
-        if (json && Array.isArray(json.agendamentos)) {
-          bookings = json.agendamentos.map(row => ({
-            id: String(row.id),
-            type: row.status === 'bloqueado' ? 'block' : 'booking',
-            clientName: row.cliente_nome || '',
-            clientWhatsapp: row.cliente_whatsapp || '',
-            clientEmail: row.cliente_email || '',
-            barberId: row.barbeiro_id,
-            barberName: row.barbeiro_nome,
-            serviceName: row.servico_nome,
-            price: Number(row.preco || 0),
-            date: String(row.data).split('T')[0],
-            startTime: String(row.hora_inicio).slice(0, 5),
-            endTime: String(row.hora_fim).slice(0, 5),
-            status: row.status || 'agendado'
+        const resp = await fetch(CONFIG.sheetsApiUrl, { method: 'GET', redirect: 'follow' });
+        const json = await resp.json();
+        if (json && json.status === 'ok' && Array.isArray(json.agendamentos)) {
+          estado.agendamentos = json.agendamentos.map(item => ({
+            ...item,
+            data: String(item.data || '').replace(/^'/, '').trim(),
+            hora_inicio: String(item.hora_inicio || '').replace(/^'/, '').trim(),
+            hora_fim: String(item.hora_fim || '').replace(/^'/, '').trim()
           }));
-          saveBookings();
-          if (currentView === 'admin') renderAdminAgenda();
-          if (notify) showToast('Agenda sincronizada com Google Sheets!', 'success');
+          localStorage.setItem('barbearia_agendamentos', JSON.stringify(estado.agendamentos));
+          atualizarStatusSync('ok', 'Agenda sincronizada');
+          
+          if (estado.barbeiroSelecionado && estado.servicoSelecionado) {
+            renderizarHorariosDisponiveis();
+          }
+          if (estado.usuarioLogado) {
+            renderizarAgendaBarbeiro();
+          }
+        } else {
+          throw new Error('Formato inválido');
         }
       } catch (err) {
-        if (notify) showToast('Erro ao sincronizar com Google Sheets.', 'error');
+        console.warn('Falha ao ler nuvem:', err);
+        atualizarStatusSync('erro', 'Modo offline (verifique a implantação do Script)');
+        if (mostrarAlerta) {
+          alert('Não foi possível conectar ao Google Sheets. Verifique se a implantação está como "Qualquer pessoa".');
+        }
       }
     }
 
-    // =========================================================================
-    // 6. CÁLCULO DE DISPONIBILIDADE (ANTI-CONFLITO)
-    // =========================================================================
-    function isSlotFree(barberId, date, startMin, endMin) {
-      return !bookings.some(item => {
-        if (item.date !== date) return false;
-        if (item.barberId !== barberId) return false;
-        if (item.status === 'cancelado') return false;
+    function atualizarStatusSync(tipo, texto) {
+      const dot = document.getElementById('sync-dot');
+      const txt = document.getElementById('sync-text');
+      if (!dot || !txt) return;
+      txt.textContent = texto;
+      dot.className = 'w-2 h-2 rounded-full inline-block ' + (
+        tipo === 'ok' ? 'bg-emerald-500' : tipo === 'erro' ? 'bg-red-500' : 'bg-amber-500'
+      );
+    }
 
-        const bStart = timeToMin(item.startTime);
-        const bEnd = timeToMin(item.endTime);
+    // 3. FLUXO DO CLIENTE
+    function selecionarBarbeiro(id) {
+      estado.barbeiroSelecionado = id;
+      estado.servicoSelecionado = null;
+      estado.horarioSelecionado = null;
 
-        return (startMin < bEnd) && (endMin > bStart);
+      document.querySelectorAll('.barbeiro-card').forEach(el => {
+        el.classList.remove('border-amber-600', 'bg-amber-50/40');
+        el.classList.add('border-zinc-200');
       });
+      const card = document.getElementById('btn-barb-' + id);
+      card.classList.remove('border-zinc-200');
+      card.classList.add('border-amber-600', 'bg-amber-50/40');
+
+      renderizarServicos();
+      document.getElementById('sec-servicos').classList.remove('hidden');
+      document.getElementById('sec-data-hora').classList.add('hidden');
+      document.getElementById('sec-dados-cliente').classList.add('hidden');
     }
 
-    function generateAvailableTimes(barberId, date, durationMins) {
-      const slots = [];
-      const openMin = CONFIG.openHour * 60;
-      const closeMin = CONFIG.closeHour * 60;
+    function renderizarServicos() {
+      const container = document.getElementById('lista-servicos');
+      const filtrados = SERVICOS.filter(s => s.barbeiro === 'ambos' || s.barbeiro === estado.barbeiroSelecionado);
 
-      const now = new Date();
-      const isToday = (date === getTodayISO());
-      const minAllowedToday = now.getHours() * 60 + now.getMinutes() + 15;
-
-      for (let start = openMin; start + durationMins <= closeMin; start += CONFIG.slotStepMinutes) {
-        if (isToday && start < minAllowedToday) continue;
-        const end = start + durationMins;
-        if (isSlotFree(barberId, date, start, end)) {
-          slots.push(minToTime(start));
-        }
-      }
-      return slots;
-    }
-
-    // =========================================================================
-    // 7. FLUXO DO CLIENTE (PASSOS 1 A 4)
-    // =========================================================================
-    function selectClientBarber(barberId) {
-      bookingDraft.barberId = barberId;
-      bookingDraft.serviceId = null;
-      bookingDraft.time = '';
-
-      const barber = BARBERS.find(b => b.id === barberId);
-      document.getElementById('selected-barber-avatar').textContent = barber.initials;
-      document.getElementById('selected-barber-name').textContent = barber.name;
-
-      renderServicesForBarber(barberId);
-      goToClientStep(2);
-    }
-
-    function renderServicesForBarber(barberId) {
-      const grid = document.getElementById('client-services-grid');
-      const availableServices = SERVICES.filter(s => s.barber === barberId || s.barber === 'both');
-
-      grid.innerHTML = availableServices.map(srv => `
-        <div onclick="selectClientService('${srv.id}')"
-          class="cursor-pointer group bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-900 rounded-2xl p-4 transition-all flex items-center justify-between gap-3 shadow-xs">
-          <div class="space-y-1">
-            <h3 class="font-bold text-sm text-slate-900 group-hover:text-amber-700 transition-colors">${srv.name}</h3>
-            <div class="flex items-center gap-3 text-xs text-slate-500">
-              <span class="font-extrabold text-slate-900 text-sm">${formatBRL(srv.price)}</span>
-              <span class="flex items-center gap-1">
-                <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-700"></i>
-                ${formatDuration(srv.duration)}
-              </span>
-            </div>
+      container.innerHTML = filtrados.map(s => `
+        <button type="button" onclick="selecionarServico('${s.id}')" id="srv-${s.id}"
+          class="srv-card border border-zinc-200 rounded-xl p-3.5 text-left hover:border-amber-600 transition flex flex-col justify-between">
+          <div class="font-semibold text-sm text-zinc-900">${s.nome}</div>
+          <div class="flex items-center justify-between mt-2 text-xs">
+            <span class="text-zinc-500">${formatarDuracao(s.duracao)}</span>
+            <span class="font-bold text-amber-700">R$ ${s.preco.toFixed(2).replace('.', ',')}</span>
           </div>
-          <div class="w-8 h-8 rounded-xl bg-slate-100 group-hover:bg-slate-900 text-slate-500 group-hover:text-white flex items-center justify-center shrink-0 transition-colors">
-            <i data-lucide="chevron-right" class="w-4 h-4"></i>
-          </div>
-        </div>
-      `).join('');
-      lucide.createIcons();
-    }
-
-    function selectClientService(serviceId) {
-      bookingDraft.serviceId = serviceId;
-      bookingDraft.time = '';
-      if (!bookingDraft.date) {
-        bookingDraft.date = getTodayISO();
-      }
-
-      const srv = SERVICES.find(s => s.id === serviceId);
-      document.getElementById('step3-summary-service').textContent = srv.name;
-      document.getElementById('step3-summary-meta').textContent = `(${formatDuration(srv.duration)} • ${formatBRL(srv.price)})`;
-      document.getElementById('slots-duration-info').textContent = `Duração: ${formatDuration(srv.duration)}`;
-
-      renderClientDates();
-      goToClientStep(3);
-    }
-
-    function onClientDateInput(val) {
-      if (!val) return;
-      bookingDraft.date = val;
-      bookingDraft.time = '';
-      renderClientDates();
-    }
-
-    function renderClientDates() {
-      const carousel = document.getElementById('client-dates-carousel');
-      const picker = document.getElementById('client-date-picker');
-      const todayISO = getTodayISO();
-
-      picker.min = todayISO;
-      picker.value = bookingDraft.date;
-
-      const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-      const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-
-      let html = '';
-      const base = new Date();
-      for (let i = 0; i < 14; i++) {
-        const d = new Date(base);
-        d.setDate(base.getDate() + i);
-        if (d.getDay() === 0) continue; // Pula domingos
-
-        const offset = d.getTimezoneOffset() * 60000;
-        const iso = new Date(d - offset).toISOString().split('T')[0];
-
-        if (bookingDraft.date === todayISO && i === 0 && base.getDay() === 0) {
-          bookingDraft.date = iso;
-        }
-
-        const active = bookingDraft.date === iso;
-        const dayLabel = i === 0 ? 'Hoje' : weekDays[d.getDay()];
-
-        html += `
-          <button type="button" onclick="selectClientDate('${iso}')"
-            class="shrink-0 w-18 min-w-[72px] py-2.5 px-2 rounded-2xl border text-center transition-all ${
-              active
-                ? 'bg-slate-900 border-slate-900 text-white shadow-sm'
-                : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
-            }">
-            <span class="block text-[10px] font-bold uppercase ${active ? 'text-amber-400' : 'text-slate-400'}">${dayLabel}</span>
-            <span class="block text-base font-extrabold my-0.5">${d.getDate().toString().padStart(2, '0')}</span>
-            <span class="block text-[10px] ${active ? 'text-slate-300' : 'text-slate-400'}">${months[d.getMonth()]}</span>
-          </button>
-        `;
-      }
-      carousel.innerHTML = html;
-      renderClientTimeSlots();
-    }
-
-    function selectClientDate(iso) {
-      bookingDraft.date = iso;
-      bookingDraft.time = '';
-      renderClientDates();
-    }
-
-    function renderClientTimeSlots() {
-      const grid = document.getElementById('client-times-grid');
-      const srv = SERVICES.find(s => s.id === bookingDraft.serviceId);
-      const times = generateAvailableTimes(bookingDraft.barberId, bookingDraft.date, srv.duration);
-
-      if (times.length === 0) {
-        grid.innerHTML = `
-          <div class="col-span-full bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center space-y-1">
-            <p class="text-sm font-bold text-slate-800">Nenhum horário livre nesta data</p>
-            <p class="text-xs text-slate-500">Por favor, selecione outro dia acima.</p>
-          </div>
-        `;
-        return;
-      }
-
-      grid.innerHTML = times.map(t => `
-        <button type="button" onclick="selectClientTime('${t}')"
-          class="py-3 px-2 rounded-xl bg-white hover:bg-slate-900 border border-slate-200 hover:border-slate-900 text-slate-900 hover:text-white font-bold text-sm transition-all shadow-2xs">
-          ${t}
         </button>
       `).join('');
     }
 
-    function selectClientTime(time) {
-      bookingDraft.time = time;
-      const barber = BARBERS.find(b => b.id === bookingDraft.barberId);
-      const srv = SERVICES.find(s => s.id === bookingDraft.serviceId);
+    function selecionarServico(id) {
+      estado.servicoSelecionado = SERVICOS.find(s => s.id === id);
+      estado.horarioSelecionado = null;
 
-      document.getElementById('conf-barber').textContent = barber.name;
-      document.getElementById('conf-service').textContent = srv.name;
-      document.getElementById('conf-datetime').textContent = `${formatDateBR(bookingDraft.date)} às ${bookingDraft.time} (${formatDuration(srv.duration)})`;
-      document.getElementById('conf-price').textContent = formatBRL(srv.price);
-
-      goToClientStep(4);
-    }
-
-    function goToClientStep(step) {
-      const labels = {
-        1: 'Passo 1 de 4: Escolha o Profissional',
-        2: 'Passo 2 de 4: Escolha o Serviço',
-        3: 'Passo 3 de 4: Data e Horário',
-        4: 'Passo 4 de 4: Seus Dados'
-      };
-      document.getElementById('client-step-label').textContent = labels[step];
-      document.getElementById('client-step-percent').textContent = `${step * 25}%`;
-
-      [1, 2, 3, 4].forEach(s => {
-        document.getElementById(`client-step-${s}`).classList.add('hidden');
-        document.getElementById(`prog-${s}`).className = `h-1.5 rounded-full transition-all ${s <= step ? 'bg-slate-900' : 'bg-slate-200'}`;
+      document.querySelectorAll('.srv-card').forEach(el => {
+        el.classList.remove('border-amber-600', 'bg-amber-50/40');
+        el.classList.add('border-zinc-200');
       });
-      document.getElementById('client-step-success').classList.add('hidden');
-      document.getElementById(`client-step-${step}`).classList.remove('hidden');
+      const card = document.getElementById('srv-' + id);
+      card.classList.remove('border-zinc-200');
+      card.classList.add('border-amber-600', 'bg-amber-50/40');
 
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.getElementById('sec-data-hora').classList.remove('hidden');
+      document.getElementById('sec-dados-cliente').classList.add('hidden');
+      renderizarHorariosDisponiveis();
     }
 
-    function submitClientBooking(e) {
-      e.preventDefault();
-      const clientName = document.getElementById('input-client-name').value.trim();
-      const clientWhatsapp = document.getElementById('input-client-whatsapp').value.trim();
-      const clientEmail = document.getElementById('input-client-email').value.trim();
+    function renderizarHorariosDisponiveis() {
+      const dataSel = document.getElementById('input-data').value;
+      const grid = document.getElementById('grid-horarios');
+      if (!dataSel || !estado.barbeiroSelecionado || !estado.servicoSelecionado) return;
 
-      const barber = BARBERS.find(b => b.id === bookingDraft.barberId);
-      const srv = SERVICES.find(s => s.id === bookingDraft.serviceId);
-      const startMin = timeToMin(bookingDraft.time);
-      const endMin = startMin + srv.duration;
+      const duracao = estado.servicoSelecionado.duracao;
+      const inicioMin = horaParaMinutos(CONFIG.horaAbertura);
+      const fimMin = horaParaMinutos(CONFIG.horaFechamento);
 
-      if (!isSlotFree(barber.id, bookingDraft.date, startMin, endMin)) {
-        showToast('Este horário acabou de ser ocupado. Escolha outro.', 'error');
-        goToClientStep(3);
+      const ocupados = estado.agendamentos.filter(a =>
+        a.barbeiro_id === estado.barbeiroSelecionado &&
+        a.data === dataSel &&
+        a.status !== 'cancelado'
+      );
+
+      const agora = new Date();
+      const hojeStr = agora.toISOString().split('T')[0];
+      const minutosAgora = agora.getHours() * 60 + agora.getMinutes();
+
+      let botoes = [];
+      for (let m = inicioMin; m + duracao <= fimMin; m += CONFIG.intervaloGrade) {
+        if (dataSel === hojeStr && m <= minutosAgora + 15) continue;
+
+        const fimSlot = m + duracao;
+        const conflito = ocupados.some(oc => {
+          const ocIni = horaParaMinutos(oc.hora_inicio);
+          const ocFim = horaParaMinutos(oc.hora_fim);
+          return m < ocFim && fimSlot > ocIni;
+        });
+
+        if (!conflito) {
+          const horaStr = minutosParaHora(m);
+          const ativo = estado.horarioSelecionado === horaStr;
+          botoes.push(`
+            <button type="button" onclick="selecionarHorario('${horaStr}')"
+              class="py-2.5 rounded-xl text-xs font-bold border transition ${ativo ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-800 border-zinc-200 hover:border-amber-600'}">
+              ${horaStr}
+            </button>
+          `);
+        }
+      }
+
+      grid.innerHTML = botoes.length
+        ? botoes.join('')
+        : '<p class="col-span-full text-xs text-zinc-500 py-3">Nenhum horário disponível para esta data.</p>';
+    }
+
+    function selecionarHorario(horaStr) {
+      estado.horarioSelecionado = horaStr;
+      renderizarHorariosDisponiveis();
+
+      const barb = CONFIG.barbeiros[estado.barbeiroSelecionado];
+      const srv = estado.servicoSelecionado;
+      const dataBr = document.getElementById('input-data').value.split('-').reverse().join('/');
+
+      document.getElementById('res-barbeiro').textContent = barb.nome;
+      document.getElementById('res-servico').textContent = `${srv.nome} (${formatarDuracao(srv.duracao)})`;
+      document.getElementById('res-data-hora').textContent = `${dataBr} às ${horaStr}`;
+      document.getElementById('res-valor').textContent = `R$ ${srv.preco.toFixed(2).replace('.', ',')}`;
+
+      document.getElementById('sec-dados-cliente').classList.remove('hidden');
+    }
+
+    async function confirmarAgendamentoCliente() {
+      const nome = document.getElementById('cli-nome').value.trim();
+      const whatsapp = document.getElementById('cli-whatsapp').value.trim();
+      const email = document.getElementById('cli-email').value.trim();
+      const dataSel = document.getElementById('input-data').value;
+
+      if (!nome || !whatsapp || !email) {
+        alert('Por favor, preencha seu nome completo, WhatsApp e e-mail.');
         return;
       }
 
-      const record = {
-        id: 'ag-' + Date.now(),
-        type: 'booking',
-        clientName,
-        clientWhatsapp,
-        clientEmail,
-        barberId: barber.id,
-        barberName: barber.name,
-        serviceName: srv.name,
-        price: srv.price,
-        date: bookingDraft.date,
-        startTime: bookingDraft.time,
-        endTime: minToTime(endMin),
+      const btn = document.getElementById('btn-confirmar-agendamento');
+      btn.disabled = true;
+      btn.textContent = 'Salvando agendamento...';
+
+      const barb = CONFIG.barbeiros[estado.barbeiroSelecionado];
+      const srv = estado.servicoSelecionado;
+      const horaFim = minutosParaHora(horaParaMinutos(estado.horarioSelecionado) + srv.duracao);
+
+      const novoRegistro = {
+        id: String(Date.now()),
+        tipo: 'agendamento',
+        cliente_nome: nome,
+        cliente_whatsapp: whatsapp,
+        cliente_email: email,
+        barbeiro_id: barb.id,
+        barbeiro_nome: barb.nome,
+        servico_nome: srv.nome,
+        preco: srv.preco,
+        data: dataSel,
+        hora_inicio: estado.horarioSelecionado,
+        hora_fim: horaFim,
         status: 'agendado'
       };
 
-      bookings.push(record);
-      saveBookings();
-      sendCreateToSheets(record);
-      showToast('Agendamento realizado com sucesso!', 'success');
+      await enviarParaNuvem({ action: 'create', data: novoRegistro });
+      estado.agendamentos.push(novoRegistro);
+      localStorage.setItem('barbearia_agendamentos', JSON.stringify(estado.agendamentos));
 
-      // Mostra tela de comprovante
-      [1, 2, 3, 4].forEach(s => document.getElementById(`client-step-${s}`).classList.add('hidden'));
-      document.getElementById('client-step-success').classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Confirmar Agendamento';
 
-      document.getElementById('success-summary-box').innerHTML = `
-        <div class="flex justify-between"><span class="text-slate-500">Cliente:</span> <strong class="text-slate-900">${record.clientName}</strong></div>
-        <div class="flex justify-between"><span class="text-slate-500">Barbeiro:</span> <strong class="text-slate-900">${record.barberName}</strong></div>
-        <div class="flex justify-between"><span class="text-slate-500">Serviço:</span> <strong class="text-slate-900 text-right">${record.serviceName}</strong></div>
-        <div class="flex justify-between"><span class="text-slate-500">Data e Hora:</span> <strong class="text-amber-700">${formatDateBR(record.date)} às ${record.startTime}</strong></div>
-        <div class="flex justify-between border-t border-slate-200 pt-2 mt-2"><span class="text-slate-500">Valor:</span> <strong class="text-emerald-700">${formatBRL(record.price)}</strong></div>
-      `;
+      const dataBr = dataSel.split('-').reverse().join('/');
+      document.getElementById('msg-sucesso-detalhes').innerHTML =
+        `<strong>${nome}</strong>, seu horário para <strong>${srv.nome}</strong> com <strong>${barb.nome}</strong> está reservado para o dia <strong>${dataBr} às ${estado.horarioSelecionado}</strong>.`;
 
-      const waText = `Olá! Acabei de realizar um agendamento:\n\n` +
-                     `👤 *Nome:* ${record.clientName}\n` +
-                     `💈 *Barbeiro:* ${record.barberName}\n` +
-                     `✂️ *Serviço:* ${record.serviceName}\n` +
-                     `📅 *Data:* ${formatDateBR(record.date)} às *${record.startTime}*\n` +
-                     `💰 *Valor:* ${formatBRL(record.price)}`;
-
-      document.getElementById('btn-wa-share').href =
-        `https://wa.me/${CONFIG.shopWhatsapp}?text=${encodeURIComponent(waText)}`;
+      document.getElementById('sec-servicos').classList.add('hidden');
+      document.getElementById('sec-data-hora').classList.add('hidden');
+      document.getElementById('sec-dados-cliente').classList.add('hidden');
+      document.getElementById('sec-sucesso').classList.remove('hidden');
     }
 
-    function resetClientBooking() {
-      bookingDraft = { barberId: null, serviceId: null, date: '', time: '' };
-      document.getElementById('booking-form').reset();
-      goToClientStep(1);
+    function novoAgendamento() {
+      estado.servicoSelecionado = null;
+      estado.horarioSelecionado = null;
+      document.getElementById('sec-sucesso').classList.add('hidden');
+      if (estado.barbeiroSelecionado) selecionarBarbeiro(estado.barbeiroSelecionado);
     }
 
-    // =========================================================================
-    // 8. CONTROLE DE ACESSO E PAINEL DO BARBEIRO
-    // =========================================================================
-    function handleHeaderAction() {
-      if (currentView === 'admin') {
-        switchView('client');
-      } else if (loggedUser) {
-        switchView('admin');
+    // 4. ÁREA DO BARBEIRO
+    function abrirModalLogin() {
+      document.getElementById('input-pin').value = '';
+      document.getElementById('modal-login').classList.remove('hidden');
+      document.getElementById('input-pin').focus();
+    }
+
+    function fecharModalLogin() {
+      document.getElementById('modal-login').classList.add('hidden');
+    }
+
+    function validarPin() {
+      const pin = document.getElementById('input-pin').value.trim();
+      if (pin === CONFIG.barbeiros.heitor.pin) {
+        estado.usuarioLogado = 'heitor';
+      } else if (pin === CONFIG.barbeiros.jimmy.pin) {
+        estado.usuarioLogado = 'jimmy';
+      } else if (pin === CONFIG.pinAdmin) {
+        estado.usuarioLogado = 'admin';
       } else {
-        document.getElementById('pin-field').value = '';
-        document.getElementById('modal-pin').classList.remove('hidden');
-        setTimeout(() => document.getElementById('pin-field').focus(), 100);
-      }
-    }
-
-    function submitPinLogin(e) {
-      e.preventDefault();
-      const pin = document.getElementById('pin-field').value.trim();
-
-      if (pin === ADMIN_MASTER_PIN) {
-        loggedUser = { id: 'admin', name: 'Recepção / Admin Geral', initials: 'AD' };
-      } else {
-        const barber = BARBERS.find(b => b.pin === pin);
-        if (!barber) {
-          showToast('PIN inválido. Verifique seu código de acesso.', 'error');
-          document.getElementById('pin-field').value = '';
-          return;
-        }
-        loggedUser = { id: barber.id, name: barber.name, initials: barber.initials };
-      }
-
-      localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(loggedUser));
-      closeModal('modal-pin');
-      setupAdminSessionUI();
-      switchView('admin');
-      showToast(`Bem-vindo, ${loggedUser.name}!`, 'success');
-    }
-
-    function restoreBarberSession() {
-      const saved = localStorage.getItem(STORAGE_SESSION_KEY);
-      if (saved) {
-        loggedUser = JSON.parse(saved);
-        setupAdminSessionUI();
-      }
-    }
-
-    function logoutBarber() {
-      loggedUser = null;
-      localStorage.removeItem(STORAGE_SESSION_KEY);
-      switchView('client');
-      showToast('Você saiu do painel profissional.', 'info');
-    }
-
-    function setAdminToday() {
-      document.getElementById('admin-date-filter').value = getTodayISO();
-      renderAdminAgenda();
-    }
-
-    function setupAdminSessionUI() {
-      if (!loggedUser) return;
-      document.getElementById('admin-avatar').textContent = loggedUser.initials;
-      document.getElementById('admin-logged-name').textContent = loggedUser.name;
-      document.getElementById('admin-date-filter').value = getTodayISO();
-
-      const filterBox = document.getElementById('admin-barber-filter-box');
-      const selectEl = document.getElementById('admin-barber-select');
-
-      if (loggedUser.id === 'admin') {
-        filterBox.classList.remove('hidden');
-        selectEl.value = 'all';
-      } else {
-        // Barbeiro individual vê apenas sua própria agenda
-        filterBox.classList.add('hidden');
-        selectEl.value = loggedUser.id;
-      }
-    }
-
-    function switchView(view) {
-      currentView = view;
-      const clientSec = document.getElementById('view-client');
-      const adminSec = document.getElementById('view-admin');
-      const btnText = document.getElementById('header-action-text');
-      const btnIcon = document.getElementById('header-action-icon');
-
-      if (view === 'admin' && loggedUser) {
-        clientSec.classList.add('hidden');
-        adminSec.classList.remove('hidden');
-        btnText.textContent = 'Voltar ao Site';
-        btnIcon.setAttribute('data-lucide', 'arrow-left');
-        renderAdminAgenda();
-      } else {
-        currentView = 'client';
-        adminSec.classList.add('hidden');
-        clientSec.classList.remove('hidden');
-        btnText.textContent = loggedUser ? `Painel (${loggedUser.name.split(' ')[0]})` : 'Área do Barbeiro';
-        btnIcon.setAttribute('data-lucide', loggedUser ? 'calendar' : 'lock');
-        if (!document.getElementById('client-step-3').classList.contains('hidden')) {
-          renderClientTimeSlots();
-        }
-      }
-      lucide.createIcons();
-    }
-
-    function renderAdminAgenda() {
-      const dateFilter = document.getElementById('admin-date-filter').value || getTodayISO();
-      const barberFilter = loggedUser.id === 'admin'
-        ? document.getElementById('admin-barber-select').value
-        : loggedUser.id;
-
-      const dayItems = bookings
-        .filter(item => item.date === dateFilter && (barberFilter === 'all' || item.barberId === barberFilter))
-        .sort((a, b) => timeToMin(a.startTime) - timeToMin(b.startTime));
-
-      // Resumo financeiro e quantidade
-      let clientsCount = 0;
-      let expectedTotal = 0;
-      let completedTotal = 0;
-
-      dayItems.forEach(item => {
-        if (item.type === 'booking' && item.status !== 'cancelado') {
-          clientsCount++;
-          expectedTotal += Number(item.price || 0);
-          if (item.status === 'concluido') {
-            completedTotal += Number(item.price || 0);
-          }
-        }
-      });
-
-      document.getElementById('stat-clients').textContent = clientsCount;
-      document.getElementById('stat-expected').textContent = formatBRL(expectedTotal);
-      document.getElementById('stat-completed').textContent = formatBRL(completedTotal);
-
-      const list = document.getElementById('admin-agenda-list');
-      if (dayItems.length === 0) {
-        list.innerHTML = `
-          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-8 text-center space-y-1.5">
-            <i data-lucide="calendar" class="w-8 h-8 text-slate-300 mx-auto"></i>
-            <p class="text-sm font-bold text-slate-800">Nenhum horário ocupado nesta data</p>
-            <p class="text-xs text-slate-500">Use "Agendar Cliente" ou "Bloquear Horário" acima.</p>
-          </div>
-        `;
-        lucide.createIcons();
+        alert('PIN incorreto.');
         return;
       }
 
-      list.innerHTML = dayItems.map(item => {
-        const isBlock = item.type === 'block';
-        const isCanceled = item.status === 'cancelado';
-        const isCompleted = item.status === 'concluido';
+      fecharModalLogin();
+      document.getElementById('view-cliente').classList.add('hidden');
+      document.getElementById('btn-area-barbeiro').classList.add('hidden');
+      document.getElementById('view-barbeiro').classList.remove('hidden');
 
-        let badge = `<span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">Agendado</span>`;
-        if (isCompleted) badge = `<span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">Concluído</span>`;
-        if (isCanceled) badge = `<span class="px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-200 text-[10px] font-bold">Cancelado</span>`;
-        if (isBlock) badge = `<span class="px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 text-[10px] font-bold">Bloqueio</span>`;
+      const titulo = estado.usuarioLogado === 'admin'
+        ? 'Agenda Geral (Todos)'
+        : `Agenda — ${CONFIG.barbeiros[estado.usuarioLogado].nome}`;
+      document.getElementById('painel-titulo-barbeiro').textContent = titulo;
 
-        const digits = (item.clientWhatsapp || '').replace(/\D/g, '');
-        const waUrl = digits
-          ? `https://wa.me/55${digits}?text=${encodeURIComponent(`Olá ${item.clientName}, tudo bem? Passando para confirmar seu horário hoje às ${item.startTime} com ${item.barberName}.`)}`
-          : null;
+      if (estado.usuarioLogado === 'admin') {
+        document.getElementById('admin-filtro-barbeiro').classList.remove('hidden');
+      } else {
+        document.getElementById('admin-filtro-barbeiro').classList.add('hidden');
+      }
 
+      renderizarAgendaBarbeiro();
+    }
+
+    function sairPainelBarbeiro() {
+      estado.usuarioLogado = null;
+      document.getElementById('view-barbeiro').classList.add('hidden');
+      document.getElementById('view-cliente').classList.remove('hidden');
+      document.getElementById('btn-area-barbeiro').classList.remove('hidden');
+    }
+
+    function setFiltroAdmin(filtro) {
+      estado.filtroAdmin = filtro;
+      renderizarAgendaBarbeiro();
+    }
+
+    function renderizarAgendaBarbeiro() {
+      const dataSel = document.getElementById('painel-data').value;
+      const lista = document.getElementById('lista-agenda-barbeiro');
+
+      let itens = estado.agendamentos.filter(a => a.data === dataSel && a.status !== 'cancelado');
+
+      if (estado.usuarioLogado !== 'admin') {
+        itens = itens.filter(a => a.barbeiro_id === estado.usuarioLogado);
+      } else if (estado.filtroAdmin !== 'todos') {
+        itens = itens.filter(a => a.barbeiro_id === estado.filtroAdmin);
+      }
+
+      itens.sort((a, b) => horaParaMinutos(a.hora_inicio) - horaParaMinutos(b.hora_inicio));
+
+      const atendimentos = itens.filter(i => i.tipo !== 'bloqueio');
+      const totalValor = atendimentos.reduce((acc, i) => acc + (Number(i.preco) || 0), 0);
+
+      document.getElementById('stat-qtd').textContent = atendimentos.length;
+      document.getElementById('stat-valor').textContent = `R$ ${totalValor.toFixed(2).replace('.', ',')}`;
+
+      if (!itens.length) {
+        lista.innerHTML = '<div class="bg-white border border-zinc-200 rounded-2xl p-8 text-center text-sm text-zinc-400">Nenhum horário agendado ou bloqueado para esta data.</div>';
+        return;
+      }
+
+      lista.innerHTML = itens.map(item => {
+        const isBloqueio = item.tipo === 'bloqueio';
         return `
-          <div class="bg-white border ${isBlock ? 'border-slate-300 bg-slate-50/70' : 'border-slate-200'} ${isCanceled ? 'opacity-50' : ''} rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
-            <div class="flex items-start gap-3.5">
-              <div class="bg-slate-900 text-white rounded-xl px-3 py-2 text-center shrink-0 min-w-[74px]">
-                <span class="block text-sm font-extrabold">${item.startTime}</span>
-                <span class="block text-[10px] text-amber-400">até ${item.endTime}</span>
+          <div class="bg-white border ${isBloqueio ? 'border-red-200 bg-red-50/40' : 'border-zinc-200'} rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-bold text-zinc-900">${item.hora_inicio} - ${item.hora_fim}</span>
+                <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full ${isBloqueio ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'}">
+                  ${item.barbeiro_nome}
+                </span>
               </div>
-
-              <div class="space-y-1">
-                <div class="flex flex-wrap items-center gap-2">
-                  <h4 class="font-extrabold text-sm text-slate-900">${item.clientName}</h4>
-                  ${badge}
-                  ${loggedUser.id === 'admin' ? `<span class="text-[11px] font-semibold text-slate-500">• ${item.barberName}</span>` : ''}
-                </div>
-                <p class="text-xs font-medium text-slate-600">${item.serviceName}</p>
-                ${!isBlock ? `
-                  <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 pt-0.5">
-                    <span class="font-bold text-slate-900">${formatBRL(item.price)}</span>
-                    ${item.clientWhatsapp ? `<span>${item.clientWhatsapp}</span>` : ''}
-                    ${item.clientEmail ? `<span>${item.clientEmail}</span>` : ''}
-                  </div>
-                ` : ''}
+              <div class="text-sm font-semibold text-zinc-800 mt-1">
+                ${isBloqueio ? `BLOQUEIO: ${item.servico_nome}` : `${item.cliente_nome} — ${item.servico_nome}`}
               </div>
+              ${!isBloqueio ? `<div class="text-xs text-zinc-500 mt-0.5">WhatsApp: ${item.cliente_whatsapp} ${item.cliente_email ? `| ${item.cliente_email}` : ''}</div>` : ''}
             </div>
-
-            <div class="flex flex-wrap items-center gap-2 border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0">
-              ${!isBlock && !isCanceled && !isCompleted ? `
-                <button onclick="changeItemStatus('${item.id}', 'concluido')"
-                  class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1">
-                  <i data-lucide="check" class="w-3.5 h-3.5"></i> Concluir
-                </button>
-              ` : ''}
-
-              ${waUrl && !isCanceled ? `
-                <a href="${waUrl}" target="_blank" rel="noopener noreferrer"
-                  class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all flex items-center gap-1">
-                  <i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i> WhatsApp
-                </a>
-              ` : ''}
-
-              ${!isCanceled ? `
-                <button onclick="changeItemStatus('${item.id}', 'cancelado')"
-                  class="px-3 py-2 rounded-xl bg-red-50 hover:bg-red-600 text-red-700 hover:text-white border border-red-200 text-xs font-bold transition-all flex items-center gap-1">
-                  <i data-lucide="x" class="w-3.5 h-3.5"></i> ${isBlock ? 'Desbloquear' : 'Cancelar'}
-                </button>
-              ` : ''}
+            <div class="flex items-center gap-2">
+              ${!isBloqueio ? `<span class="text-sm font-bold text-zinc-900 mr-2">R$ ${Number(item.preco || 0).toFixed(2).replace('.', ',')}</span>` : ''}
+              <button onclick="cancelarRegistro('${item.id}')" class="text-xs text-red-600 hover:bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg font-medium">
+                ${isBloqueio ? 'Desbloquear' : 'Cancelar'}
+              </button>
             </div>
           </div>
         `;
       }).join('');
-
-      lucide.createIcons();
     }
 
-    function changeItemStatus(id, newStatus) {
-      const idx = bookings.findIndex(b => b.id === id);
-      if (idx === -1) return;
+    // 5. AGENDAMENTO MANUAL E BLOQUEIO PELO BARBEIRO
+    function abrirModalManual(tipo) {
+      estado.tipoModalManual = tipo;
+      document.getElementById('modal-manual-titulo').textContent =
+        tipo === 'bloqueio' ? 'Bloquear Horário na Agenda' : 'Agendar Cliente Manualmente';
 
-      if (bookings[idx].type === 'block' && newStatus === 'cancelado') {
-        bookings.splice(idx, 1);
-        sendStatusToSheets(id, 'cancelado');
-        showToast('Bloqueio removido! Horário liberado.', 'info');
+      document.getElementById('wrap-manual-cliente').classList.toggle('hidden', tipo === 'bloqueio');
+      document.getElementById('wrap-manual-bloqueio').classList.toggle('hidden', tipo !== 'bloqueio');
+
+      const selBarb = document.getElementById('man-barbeiro');
+      if (estado.usuarioLogado !== 'admin') {
+        selBarb.value = estado.usuarioLogado;
+        document.getElementById('wrap-manual-barbeiro').classList.add('hidden');
       } else {
-        bookings[idx].status = newStatus;
-        sendStatusToSheets(id, newStatus);
-        showToast(newStatus === 'concluido' ? 'Atendimento concluído!' : 'Horário cancelado e liberado.', 'success');
+        document.getElementById('wrap-manual-barbeiro').classList.remove('hidden');
       }
 
-      saveBookings();
-      renderAdminAgenda();
-    }
-
-    // =========================================================================
-    // 9. MODAIS DO BARBEIRO (AGENDAR CLIENTE E BLOQUEAR HORÁRIO)
-    // =========================================================================
-    function closeModal(id) {
-      document.getElementById(id).classList.add('hidden');
-    }
-
-    function openModalManual() {
-      const barberRow = document.getElementById('manual-barber-row');
-      const barberSelect = document.getElementById('manual-barber');
-
-      if (loggedUser.id === 'admin') {
-        barberRow.classList.remove('hidden');
-      } else {
-        barberRow.classList.add('hidden');
-        barberSelect.value = loggedUser.id;
-      }
-
-      document.getElementById('manual-date').value = document.getElementById('admin-date-filter').value || getTodayISO();
-      populateManualServices();
+      document.getElementById('man-data').value = document.getElementById('painel-data').value;
+      atualizarSelectServicosManual();
       document.getElementById('modal-manual').classList.remove('hidden');
     }
 
-    function populateManualServices() {
-      const barberId = document.getElementById('manual-barber').value;
-      const srvSelect = document.getElementById('manual-service');
-      const filtered = SERVICES.filter(s => s.barber === barberId || s.barber === 'both');
+    function fecharModalManual() {
+      document.getElementById('modal-manual').classList.add('hidden');
+    }
 
-      srvSelect.innerHTML = filtered.map(s =>
-        `<option value="${s.id}">${s.name} — ${formatBRL(s.price)} (${formatDuration(s.duration)})</option>`
+    function atualizarSelectServicosManual() {
+      const barbId = document.getElementById('man-barbeiro').value;
+      const filtrados = SERVICOS.filter(s => s.barbeiro === 'ambos' || s.barbeiro === barbId);
+      document.getElementById('man-servico').innerHTML = filtrados.map(s =>
+        `<option value="${s.id}">${s.nome} (R$ ${s.preco} - ${formatarDuracao(s.duracao)})</option>`
       ).join('');
     }
 
-    function submitManualBooking(e) {
-      e.preventDefault();
-      const barberId = document.getElementById('manual-barber').value;
-      const serviceId = document.getElementById('manual-service').value;
-      const clientName = document.getElementById('manual-name').value.trim();
-      const clientWhatsapp = document.getElementById('manual-whatsapp').value.trim();
-      const clientEmail = document.getElementById('manual-email').value.trim();
-      const date = document.getElementById('manual-date').value;
-      const startTime = document.getElementById('manual-time').value;
+    async function salvarRegistroManual() {
+      const barbId = document.getElementById('man-barbeiro').value;
+      const barb = CONFIG.barbeiros[barbId];
+      const dataSel = document.getElementById('man-data').value;
+      const horaIni = document.getElementById('man-hora').value;
 
-      const barber = BARBERS.find(b => b.id === barberId);
-      const srv = SERVICES.find(s => s.id === serviceId);
-      const startMin = timeToMin(startTime);
-      const endMin = startMin + srv.duration;
-
-      if (!isSlotFree(barberId, date, startMin, endMin)) {
-        showToast('Conflito de horário! Já existe agendamento ou bloqueio neste intervalo.', 'error');
+      if (!dataSel || !horaIni) {
+        alert('Informe data e horário.');
         return;
       }
 
-      const record = {
-        id: 'man-' + Date.now(),
-        type: 'booking',
-        clientName,
-        clientWhatsapp,
-        clientEmail,
-        barberId: barber.id,
-        barberName: barber.name,
-        serviceName: srv.name,
-        price: srv.price,
-        date,
-        startTime,
-        endTime: minToTime(endMin),
-        status: 'agendado'
-      };
-
-      bookings.push(record);
-      saveBookings();
-      sendCreateToSheets(record);
-      closeModal('modal-manual');
-      e.target.reset();
-      document.getElementById('admin-date-filter').value = date;
-      renderAdminAgenda();
-      showToast('Cliente agendado com sucesso!', 'success');
-    }
-
-    function openModalBlock() {
-      const barberRow = document.getElementById('block-barber-row');
-      const barberSelect = document.getElementById('block-barber');
-
-      if (loggedUser.id === 'admin') {
-        barberRow.classList.remove('hidden');
+      let registro;
+      if (estado.tipoModalManual === 'bloqueio') {
+        const motivo = document.getElementById('man-motivo').value.trim() || 'Horário Bloqueado';
+        const duracao = Number(document.getElementById('man-duracao-bloqueio').value);
+        registro = {
+          id: String(Date.now()),
+          tipo: 'bloqueio',
+          cliente_nome: 'BLOQUEIO',
+          cliente_whatsapp: '',
+          cliente_email: '',
+          barbeiro_id: barb.id,
+          barbeiro_nome: barb.nome,
+          servico_nome: motivo,
+          preco: 0,
+          data: dataSel,
+          hora_inicio: horaIni,
+          hora_fim: minutosParaHora(horaParaMinutos(horaIni) + duracao),
+          status: 'agendado'
+        };
       } else {
-        barberRow.classList.add('hidden');
-        barberSelect.value = loggedUser.id;
+        const cliente = document.getElementById('man-cliente').value.trim();
+        const whatsapp = document.getElementById('man-whatsapp').value.trim();
+        const email = document.getElementById('man-email').value.trim();
+        const srv = SERVICOS.find(s => s.id === document.getElementById('man-servico').value);
+
+        if (!cliente) {
+          alert('Informe o nome do cliente.');
+          return;
+        }
+
+        registro = {
+          id: String(Date.now()),
+          tipo: 'agendamento',
+          cliente_nome: cliente,
+          cliente_whatsapp: whatsapp || 'Balcão',
+          cliente_email: email,
+          barbeiro_id: barb.id,
+          barbeiro_nome: barb.nome,
+          servico_nome: srv.nome,
+          preco: srv.preco,
+          data: dataSel,
+          hora_inicio: horaIni,
+          hora_fim: minutosParaHora(horaParaMinutos(horaIni) + srv.duracao),
+          status: 'agendado'
+        };
       }
 
-      document.getElementById('block-date').value = document.getElementById('admin-date-filter').value || getTodayISO();
-      document.getElementById('modal-block').classList.remove('hidden');
+      const btn = document.getElementById('btn-salvar-manual');
+      btn.disabled = true;
+      btn.textContent = 'Salvando...';
+
+      await enviarParaNuvem({ action: 'create', data: registro });
+      estado.agendamentos.push(registro);
+      localStorage.setItem('barbearia_agendamentos', JSON.stringify(estado.agendamentos));
+
+      btn.disabled = false;
+      btn.textContent = 'Salvar';
+      fecharModalManual();
+      renderizarAgendaBarbeiro();
     }
 
-    function submitTimeBlock(e) {
-      e.preventDefault();
-      const barberId = document.getElementById('block-barber').value;
-      const reason = document.getElementById('block-reason').value.trim();
-      const date = document.getElementById('block-date').value;
-      const startTime = document.getElementById('block-start').value;
-      const endTime = document.getElementById('block-end').value;
+    async function cancelarRegistro(id) {
+      if (!confirm('Deseja realmente cancelar/liberar este horário?')) return;
+      const item = estado.agendamentos.find(a => String(a.id) === String(id));
+      if (item) item.status = 'cancelado';
+      localStorage.setItem('barbearia_agendamentos', JSON.stringify(estado.agendamentos));
+      renderizarAgendaBarbeiro();
+      await enviarParaNuvem({ action: 'update_status', id: String(id), status: 'cancelado' });
+    }
 
-      if (timeToMin(endTime) <= timeToMin(startTime)) {
-        showToast('O horário de término deve ser maior que o de início.', 'error');
-        return;
+    async function enviarParaNuvem(payload) {
+      try {
+        await fetch(CONFIG.sheetsApiUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+      } catch (e) {
+        console.warn('Erro ao enviar para planilha:', e);
       }
+    }
 
-      const barber = BARBERS.find(b => b.id === barberId);
+    // UTILITÁRIOS DE TEMPO
+    function horaParaMinutos(h) {
+      if (!h || !h.includes(':')) return 0;
+      const [hh, mm] = h.split(':').map(Number);
+      return hh * 60 + mm;
+    }
 
-      const record = {
-        id: 'blk-' + Date.now(),
-        type: 'block',
-        clientName: reason,
-        clientWhatsapp: '',
-        clientEmail: '',
-        barberId: barber.id,
-        barberName: barber.name,
-        serviceName: 'Horário Bloqueado',
-        price: 0,
-        date,
-        startTime,
-        endTime,
-        status: 'bloqueado'
-      };
+    function minutosParaHora(m) {
+      const hh = String(Math.floor(m / 60)).padStart(2, '0');
+      const mm = String(m % 60).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
 
-      bookings.push(record);
-      saveBookings();
-      sendCreateToSheets(record);
-      closeModal('modal-block');
-      document.getElementById('admin-date-filter').value = date;
-      renderAdminAgenda();
-      showToast('Horário bloqueado na agenda!', 'info');
+    function formatarDuracao(min) {
+      if (min < 60) return `${min} min`;
+      const h = Math.floor(min / 60);
+      const r = min % 60;
+      return r ? `${h}h${r}min` : `${h}h`;
     }
   </script>
 </body>
