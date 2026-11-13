@@ -402,9 +402,10 @@
             <i data-lucide="ban" class="w-3.5 h-3.5 text-red-600"></i>
             <span>Bloquear Horário</span>
           </button>
-          <button onclick="openModalSheets()"
-            class="p-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 transition-all" title="Configurar Planilha Google Sheets">
-            <i data-lucide="database" class="w-4 h-4"></i>
+          <button id="btn-sync-cloud" onclick="fetchFromSheets(true)"
+            class="px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs transition-all flex items-center gap-1.5" title="Sincronizar com Google Drive">
+            <i data-lucide="refresh-cw" id="sync-icon" class="w-3.5 h-3.5 text-amber-700"></i>
+            <span>Sincronizar</span>
           </button>
           <button onclick="logoutBarber()"
             class="px-3 py-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-red-600 font-bold text-xs transition-all flex items-center gap-1" title="Sair da conta">
@@ -456,9 +457,7 @@
       <div class="space-y-3">
         <div class="flex items-center justify-between">
           <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Horários do Dia</h3>
-          <button id="btn-sync-cloud" onclick="fetchFromSheets(true)" class="hidden text-xs font-bold text-amber-700 hover:underline flex items-center gap-1">
-            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Atualizar Nuvem
-          </button>
+          <span id="last-sync-label" class="text-[11px] font-medium text-slate-400">Sincronizado com Google Drive</span>
         </div>
 
         <div id="admin-agenda-list" class="space-y-3">
@@ -644,42 +643,6 @@
     </div>
   </div>
 
-  <!-- Modal 4: Configuração Google Sheets (Nuvem Gratuita) -->
-  <div id="modal-sheets" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 space-y-4 my-8 shadow-2xl fade-in">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-          <i data-lucide="database" class="w-4 h-4 text-amber-700"></i>
-          Sincronização Google Sheets (Gratuita)
-        </h3>
-        <button onclick="closeModal('modal-sheets')" class="text-slate-400 hover:text-slate-900">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <p class="text-xs text-slate-600 leading-relaxed">
-        Cole abaixo a URL <strong>/exec</strong> gerada no Google Apps Script para sincronizar automaticamente os agendamentos entre o celular dos clientes, do Heitor e do Jimmy.
-      </p>
-
-      <div class="space-y-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">URL do Web App (Google Apps Script)</label>
-          <input type="url" id="sheets-url-input" placeholder="https://script.google.com/macros/s/.../exec"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-900 outline-none focus:border-slate-900" />
-        </div>
-
-        <div class="flex gap-2 pt-1">
-          <button onclick="saveSheetsUrl()" class="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs">
-            Salvar e Sincronizar
-          </button>
-          <button onclick="closeModal('modal-sheets')" class="py-2.5 px-4 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">
-            Fechar
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- ===================================================================== -->
   <!-- LÓGICA JAVASCRIPT DO SISTEMA                                          -->
   <!-- ===================================================================== -->
@@ -693,7 +656,7 @@
       openHour: 9,                     // Horário de abertura: 09:00
       closeHour: 20,                   // Horário de fechamento: 20:00
       slotStepMinutes: 15,             // Intervalo de geração de horários (15 em 15 min)
-      sheetsApiUrl: ""                 // Opcional: você pode colar sua URL /exec fixa aqui também
+      sheetsApiUrl: "https://script.google.com/macros/s/AKfycbwzg4N10LaoNz4lS5arxLmTyIWxaLPS5Vl6AfUNb5zbdvrzjf7vMYKWFy0YJ2miiahs/exec"
     };
 
     const BARBERS = [
@@ -723,7 +686,6 @@
     ];
 
     const STORAGE_BOOKINGS_KEY = 'hj_barber_bookings_v1';
-    const STORAGE_SHEETS_KEY   = 'hj_barber_sheets_url_v1';
     const STORAGE_SESSION_KEY  = 'hj_barber_session_v1';
 
     // =========================================================================
@@ -732,6 +694,7 @@
     let bookings = [];
     let currentView = 'client';
     let loggedUser = null; // { id: 'heitor' | 'jimmy' | 'admin', name: string }
+    let isSyncing = false;
 
     let bookingDraft = {
       barberId: null,
@@ -741,66 +704,148 @@
     };
 
     // =========================================================================
-    // 3. SPLASH SCREEN DE 2 SEGUNDOS
+    // 5. ARMAZENAMENTO LOCAL + INTEGRAÇÃO GOOGLE SHEETS (GOOGLE DRIVE)
     // =========================================================================
-    window.addEventListener('DOMContentLoaded', () => {
-      lucide.createIcons();
-      loadLocalBookings();
-      restoreBarberSession();
-
-      // Aguarda 2 segundos e abre o aplicativo suavemente
-      setTimeout(() => {
-        const splash = document.getElementById('splash-screen');
-        splash.classList.add('opacity-0', 'pointer-events-none');
-        setTimeout(() => splash.remove(), 500);
-      }, 2000);
-    });
-
-    // =========================================================================
-    // 4. UTILITÁRIOS DE FORMATAÇÃO E TEMPO
-    // =========================================================================
-    function getTodayISO() {
-      const now = new Date();
-      const offset = now.getTimezoneOffset() * 60000;
-      return new Date(now - offset).toISOString().split('T')[0];
+    function getSheetsUrl() {
+      return CONFIG.sheetsApiUrl;
     }
 
-    function formatBRL(val) {
-      return Number(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    function loadLocalBookings() {
+      const raw = localStorage.getItem(STORAGE_BOOKINGS_KEY);
+      if (raw) {
+        bookings = JSON.parse(raw);
+      } else {
+        bookings = [];
+        saveBookings();
+      }
+      updateCloudStatusUI('syncing');
+      fetchFromSheets(false);
     }
 
-    function formatDateBR(iso) {
-      if (!iso) return '';
-      const [y, m, d] = iso.split('-');
-      return `${d}/${m}/${y}`;
+    function saveBookings() {
+      localStorage.setItem(STORAGE_BOOKINGS_KEY, JSON.stringify(bookings));
     }
 
-    function formatDuration(mins) {
-      if (mins < 60) return `${mins} min`;
-      const h = Math.floor(mins / 60);
-      const m = mins % 60;
-      return m === 0 ? `${h}h` : `${h}h ${m}min`;
+    function updateCloudStatusUI(state = 'connected') {
+      const badge = document.getElementById('cloud-badge');
+      const syncIcon = document.getElementById('sync-icon');
+      const lastSyncLabel = document.getElementById('last-sync-label');
+      if (!badge) return;
+
+      if (state === 'syncing') {
+        badge.textContent = 'Sincronizando...';
+        badge.className = 'text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md';
+        if (syncIcon) syncIcon.classList.add('animate-spin');
+      } else if (state === 'error') {
+        badge.textContent = 'Offline (Cache Local)';
+        badge.className = 'text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md';
+        if (syncIcon) syncIcon.classList.remove('animate-spin');
+      } else {
+        badge.textContent = 'Nuvem Conectada';
+        badge.className = 'text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md';
+        if (syncIcon) syncIcon.classList.remove('animate-spin');
+        if (lastSyncLabel) {
+          const now = new Date();
+          const hh = now.getHours().toString().padStart(2, '0');
+          const mm = now.getMinutes().toString().padStart(2, '0');
+          lastSyncLabel.textContent = `Atualizado às ${hh}:${mm}`;
+        }
+      }
     }
 
-    function timeToMin(str) {
-      const [h, m] = str.split(':').map(Number);
-      return h * 60 + m;
+    async function sendCreateToSheets(record) {
+      const url = getSheetsUrl();
+      if (!url) return;
+      updateCloudStatusUI('syncing');
+      try {
+        await fetch(url, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'create',
+            data: {
+              id: record.id,
+              tipo: record.type === 'block' ? 'bloqueio' : 'agendamento',
+              cliente_nome: record.clientName,
+              cliente_whatsapp: record.clientWhatsapp,
+              cliente_email: record.clientEmail,
+              barbeiro_id: record.barberId,
+              barbeiro_nome: record.barberName,
+              servico_nome: record.serviceName,
+              preco: record.price,
+              data: record.date,
+              hora_inicio: record.startTime,
+              hora_fim: record.endTime,
+              status: record.status
+            }
+          })
+        });
+        updateCloudStatusUI('connected');
+      } catch (e) {
+        console.warn('Falha ao enviar para planilha:', e);
+        updateCloudStatusUI('error');
+      }
     }
 
-    function minToTime(total) {
-      const h = Math.floor(total / 60).toString().padStart(2, '0');
-      const m = (total % 60).toString().padStart(2, '0');
-      return `${h}:${m}`;
+    async function sendStatusToSheets(id, status) {
+      const url = getSheetsUrl();
+      if (!url) return;
+      updateCloudStatusUI('syncing');
+      try {
+        await fetch(url, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'update_status', id, status })
+        });
+        updateCloudStatusUI('connected');
+      } catch (e) {
+        console.warn('Falha ao atualizar status na planilha:', e);
+        updateCloudStatusUI('error');
+      }
     }
 
-    function maskPhone(input) {
-      let v = input.value.replace(/\D/g, '').slice(0, 11);
-      if (v.length > 6) {
-        input.value = `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
-      } else if (v.length > 2) {
-        input.value = `(${v.slice(0, 2)}) ${v.slice(2)}`;
-      } else if (v.length > 0) {
-        input.value = `(${v}`;
+    async function fetchFromSheets(notify = false) {
+      const url = getSheetsUrl();
+      if (!url || isSyncing) return;
+      isSyncing = true;
+      updateCloudStatusUI('syncing');
+      try {
+        const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+        const json = await res.json();
+        if (json && Array.isArray(json.agendamentos)) {
+          bookings = json.agendamentos.map(row => {
+            const isBlock = row.tipo === 'bloqueio' || row.status === 'bloqueado';
+            return {
+              id: String(row.id),
+              type: isBlock ? 'block' : 'booking',
+              clientName: row.cliente_nome || '',
+              clientWhatsapp: row.cliente_whatsapp || '',
+              clientEmail: row.cliente_email || '',
+              barberId: row.barbeiro_id,
+              barberName: row.barbeiro_nome,
+              serviceName: row.servico_nome,
+              price: Number(row.preco || 0),
+              date: String(row.data).replace(/^'/, '').split('T')[0],
+              startTime: String(row.hora_inicio).replace(/^'/, '').slice(0, 5),
+              endTime: String(row.hora_fim).replace(/^'/, '').slice(0, 5),
+              status: row.status || 'agendado'
+            };
+          });
+          saveBookings();
+          if (currentView === 'admin') renderAdminAgenda();
+          if (currentView === 'client' && !document.getElementById('client-step-3').classList.contains('hidden')) {
+            renderClientTimeSlots();
+          }
+          updateCloudStatusUI('connected');
+          if (notify) showToast('Agenda sincronizada com Google Drive!', 'success');
+        }
+      } catch (err) {
+        updateCloudStatusUI('error');
+        if (notify) showToast('Não foi possível sincronizar agora.', 'error');
+      } finally {
+        isSyncing = false;
       }
     }
 
@@ -1576,25 +1621,6 @@
       document.getElementById('admin-date-filter').value = date;
       renderAdminAgenda();
       showToast('Horário bloqueado na agenda!', 'info');
-    }
-
-    function openModalSheets() {
-      document.getElementById('sheets-url-input').value = getSheetsUrl();
-      document.getElementById('modal-sheets').classList.remove('hidden');
-    }
-
-    function saveSheetsUrl() {
-      const url = document.getElementById('sheets-url-input').value.trim();
-      if (url) {
-        localStorage.setItem(STORAGE_SHEETS_KEY, url);
-        updateCloudStatusUI();
-        fetchFromSheets(true);
-      } else {
-        localStorage.removeItem(STORAGE_SHEETS_KEY);
-        updateCloudStatusUI();
-        showToast('Sincronização em nuvem desativada.', 'info');
-      }
-      closeModal('modal-sheets');
     }
   </script>
 </body>
